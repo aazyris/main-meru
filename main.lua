@@ -1,12 +1,12 @@
 --// Written by depso
 --// MIT License
 --// Copyright (c) 2024 Depso
+--// Fixed & Self-Contained (No External Assets)
 
 local ImGui = {
     Windows = {},
     Animation = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
-    UIAssetId = "rbxassetid://76246418997296",
-    ToggleKey = Enum.KeyCode.RightShift -- Global Hide/Show Key
+    ToggleKey = Enum.KeyCode.RightShift
 }
 
 --// Services 
@@ -27,171 +27,223 @@ local THEME = {
 local IsStudio = RunService:IsStudio()
 local GuiParent = IsStudio and PlayerGui or CoreGui
 
---// Internal Utilities
-local function ApplyTheme(Instance)
-    if Instance:IsA("GuiObject") then
-        Instance.BackgroundColor3 = THEME.Background
-        Instance.BorderColor3 = THEME.Border
-        if Instance:IsA("TextLabel") or Instance:IsA("TextButton") then
-            Instance.TextColor3 = Color3.fromRGB(255, 255, 255)
-        end
-    end
-end
-
---// Notification System
-function ImGui:Notify(Title, Text)
-    warn("[HUB NOTIFICATION]: " .. Title .. " - " .. Text)
-end
-
+--// Create Window
 function ImGui:CreateWindow(Config)
-    local success, UI = pcall(function() return game:GetObjects(self.UIAssetId)[1] end)
-    if not success or not UI then
-        self:Notify("Error", "Failed to load UI assets")
-        return nil
-    end
-    
-    local Window = UI.Prefabs.Window:Clone()
     local Screen = Instance.new("ScreenGui", GuiParent)
     Screen.Name = "Hub_" .. (Config.Title or "Main")
     Screen.ResetOnSpawn = false
     
+    local Window = Instance.new("Frame")
     Window.Parent = Screen
+    Window.Name = "Window"
     Window.BackgroundColor3 = THEME.Background
     Window.BorderColor3 = THEME.Border
+    Window.BorderMode = Enum.BorderMode.Outline
+    Window.BorderSizePixel = 2
+    Window.Size = Config.Size or UDim2.fromOffset(450, 350)
+    Window.Position = UDim2.fromOffset(100, 100)
     Window.ClipsDescendants = true
     
-    local Content = Window.Content
-    local Body, TitleBar, ToolBar = Content.Body, Content.TitleBar, Content.ToolBar
-    local ResizeBtn = Window:FindFirstChild("ResizeGrab") or Window:FindFirstChild("Resize", true)
-
-    -- Black out components
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Parent = Window
+    TitleBar.Name = "TitleBar"
+    TitleBar.BackgroundColor3 = THEME.Section
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Size = UDim2.new(1, 0, 0, 32)
+    TitleBar.Active = true
+    TitleBar.Selectable = true
+    
+    local TitleText = Instance.new("TextLabel")
+    TitleText.Parent = TitleBar
+    TitleText.Name = "Title"
+    TitleText.Text = Config.Title or "Hub Menu"
+    TitleText.BackgroundTransparency = 1
+    TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleText.TextSize = 14
+    TitleText.Font = Enum.Font.GothamBold
+    TitleText.Size = UDim2.new(1, -40, 1, 0)
+    TitleText.TextXAlignment = Enum.TextXAlignment.Left
+    TitleText.Padding = UDim.new(0, 8)
+    
+    -- Minimize Button
+    local MinBtn = Instance.new("TextButton")
+    MinBtn.Parent = TitleBar
+    MinBtn.Name = "MinimizeBtn"
+    MinBtn.Text = "-"
+    MinBtn.BackgroundColor3 = THEME.Accent
+    MinBtn.BorderColor3 = THEME.Border
+    MinBtn.BorderSizePixel = 1
+    MinBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    MinBtn.TextSize = 16
+    MinBtn.Font = Enum.Font.GothamBold
+    MinBtn.Size = UDim2.new(0, 32, 1, 0)
+    MinBtn.Position = UDim2.new(1, -32, 0, 0)
+    
+    -- Content
+    local Content = Instance.new("Frame")
+    Content.Parent = Window
+    Content.Name = "Content"
+    Content.BackgroundColor3 = THEME.Background
+    Content.BorderSizePixel = 0
+    Content.Size = UDim2.new(1, 0, 1, -32)
+    Content.Position = UDim2.new(0, 0, 0, 32)
+    
+    -- Tab Bar
+    local TabBar = Instance.new("Frame")
+    TabBar.Parent = Content
+    TabBar.Name = "TabBar"
+    TabBar.BackgroundColor3 = THEME.Background
+    TabBar.BorderSizePixel = 0
+    TabBar.Size = UDim2.new(1, 0, 0, 28)
+    
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.Parent = TabBar
+    TabLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabLayout.Padding = UDim.new(0, 4)
+    
+    local TabPadding = Instance.new("UIPadding")
+    TabPadding.Parent = TabBar
+    TabPadding.PaddingLeft = UDim.new(0, 4)
+    
+    -- Body (Pages)
+    local Body = Instance.new("Frame")
+    Body.Parent = Content
+    Body.Name = "Body"
     Body.BackgroundColor3 = THEME.Background
-    ToolBar.BackgroundColor3 = THEME.Background
-    TitleBar.BackgroundColor3 = THEME.Background
-    pcall(function() TitleBar.Left.Title.Text = Config.Title or "Hub Menu" end)
+    Body.BorderSizePixel = 0
+    Body.Size = UDim2.new(1, 0, 1, -28)
+    Body.Position = UDim2.new(0, 0, 0, 28)
+    Body.ClipsDescendants = true
     
-    -- Safe ResizeBtn handling
-    if ResizeBtn then
-        ResizeBtn.BackgroundColor3 = THEME.Background
-        pcall(function() ResizeBtn.ImageColor3 = THEME.Accent end)
-        pcall(function() ResizeBtn.TextColor3 = THEME.Accent end)
-    end
-
-    -- Interaction: Smooth Drag & Smooth Resize
-    local function SetupInteractions()
-        local Dragging, Resizing, DragStart, ResizeStart, StartPos, StartSize
-        
-        TitleBar.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                Dragging, DragStart, StartPos = true, i.Position, Window.Position
-            end
-        end)
-
-        if ResizeBtn then
-            ResizeBtn.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    Resizing, ResizeStart, StartSize = true, i.Position, Window.AbsoluteSize
-                end
-            end)
-        end
-
-        UserInputService.InputChanged:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseMovement then
-                if Dragging then
-                    local Delta = i.Position - DragStart
-                    Window.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-                elseif Resizing then
-                    local Delta = i.Position - ResizeStart
-                    Window.Size = UDim2.fromOffset(math.max(250, StartSize.X + Delta.X), math.max(150, StartSize.Y + Delta.Y))
-                end
-            end
-        end)
-
-        UserInputService.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then Dragging, Resizing = false, false end
-        end)
-    end
-    SetupInteractions()
-
-    -- Fixed Arrow Rotation & Full Minimize
-    local Arrow = TitleBar.Left.Toggle.ToggleButton
-    local IsMinimized = false
-    local StoredY = Config.Size and Config.Size.Y.Offset or 350
+    -- Drag
+    local Dragging, DragStart, StartPos
     
-    Arrow.Rotation = 90 -- Start at expanded state
-    Arrow.Activated:Connect(function()
-        IsMinimized = not IsMinimized
-        local TargetY = IsMinimized and 32 or StoredY
-        local TargetRot = IsMinimized and 0 or 90
-        
-        -- Immediately hide body when minimizing
-        if IsMinimized then 
-            Body.Visible = false 
-        end
-        
-        -- Play animations together
-        local SizeTween = TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, TargetY)})
-        local RotTween = TweenService:Create(Arrow, self.Animation, {Rotation = TargetRot})
-        
-        SizeTween:Play()
-        RotTween:Play()
-        
-        -- Show body after expand animation completes
-        if not IsMinimized then
-            SizeTween.Completed:Connect(function()
-                Body.Visible = true
-            end)
+    TitleBar.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = true
+            DragStart = i.Position
+            StartPos = Window.Position
         end
     end)
-
+    
+    UserInputService.InputChanged:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseMovement and Dragging then
+            local Delta = i.Position - DragStart
+            Window.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = false
+        end
+    end)
+    
+    -- Minimize
+    local IsMinimized = false
+    local StoredHeight = (Config.Size and Config.Size.Y.Offset) or 350
+    
+    MinBtn.Activated:Connect(function()
+        IsMinimized = not IsMinimized
+        if IsMinimized then
+            TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, 32)}):Play()
+            Content.Visible = false
+        else
+            Content.Visible = true
+            TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, StoredHeight)}):Play()
+        end
+    end)
+    
     -- Toggle Keybind
     UserInputService.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == self.ToggleKey then
             Screen.Enabled = not Screen.Enabled
         end
     end)
-
-    local Lib = { CurrentPage = nil }
-
+    
+    local Lib = { CurrentPage = nil, CurrentTab = nil }
+    
     function Lib:CreateTab(Name)
-        local TabBtn = ToolBar.TabButton:Clone()
-        TabBtn.Parent = ToolBar; TabBtn.Text = Name; TabBtn.Visible = true
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Parent = TabBar
+        TabBtn.Name = Name
+        TabBtn.Text = Name
         TabBtn.BackgroundColor3 = THEME.Background
-        TabBtn.BackgroundTransparency = 1 -- Black by default
-
-        local Page = Body.Template:Clone()
-        Page.Parent = Body; Page.Visible = false; Page.BackgroundColor3 = THEME.Background
-
-        -- Tab Switching
+        TabBtn.BorderColor3 = THEME.Border
+        TabBtn.BorderSizePixel = 1
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.TextSize = 12
+        TabBtn.Font = Enum.Font.GothamBold
+        TabBtn.Size = UDim2.new(0, 80, 1, -4)
+        
+        local Page = Instance.new("ScrollingFrame")
+        Page.Parent = Body
+        Page.Name = Name .. "_Page"
+        Page.BackgroundColor3 = THEME.Background
+        Page.BorderSizePixel = 0
+        Page.Size = UDim2.new(1, 0, 1, 0)
+        Page.Position = UDim2.new(0, 0, 0, 0)
+        Page.Visible = false
+        Page.ScrollBarThickness = 6
+        Page.ScrollBarImageColor3 = THEME.Accent
+        
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.Parent = Page
+        PageLayout.Padding = UDim.new(0, 4)
+        PageLayout.FillDirection = Enum.FillDirection.Vertical
+        
+        local PagePadding = Instance.new("UIPadding")
+        PagePadding.Parent = Page
+        PagePadding.PaddingLeft = UDim.new(0, 6)
+        PagePadding.PaddingRight = UDim.new(0, 6)
+        PagePadding.PaddingTop = UDim.new(0, 6)
+        
         TabBtn.Activated:Connect(function()
             if self.CurrentPage then self.CurrentPage.Visible = false end
+            if self.CurrentTab then self.CurrentTab.BackgroundColor3 = THEME.Background end
             Page.Visible = true
+            TabBtn.BackgroundColor3 = THEME.Section
             self.CurrentPage = Page
-            for _, b in pairs(ToolBar:GetChildren()) do if b:IsA("TextButton") then b.BackgroundTransparency = 1 end end
-            TabBtn.BackgroundTransparency = 0.8 -- Highlight selected
+            self.CurrentTab = TabBtn
         end)
-
-        if not self.CurrentPage then 
+        
+        if not self.CurrentPage then
             Page.Visible = true
+            TabBtn.BackgroundColor3 = THEME.Section
             self.CurrentPage = Page
-            TabBtn.BackgroundTransparency = 0.8 
+            self.CurrentTab = TabBtn
         end
-
+        
         local Elements = {}
         
         function Elements:Button(Text, Callback)
-            local Btn = UI.Prefabs.Button:Clone()
-            Btn.Parent = Page; Btn.Text = Text; Btn.Visible = true
+            local Btn = Instance.new("TextButton")
+            Btn.Parent = Page
+            Btn.Name = "Button"
+            Btn.Text = Text
             Btn.BackgroundColor3 = THEME.Section
+            Btn.BorderColor3 = THEME.Border
+            Btn.BorderSizePixel = 1
+            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.TextSize = 13
+            Btn.Font = Enum.Font.GothamBold
+            Btn.Size = UDim2.new(1, 0, 0, 30)
             Btn.Activated:Connect(Callback)
             return Btn
         end
-
+        
         function Elements:Toggle(Text, Default, Callback)
             local Enabled = Default or false
-            local Tog = UI.Prefabs.Button:Clone()
-            Tog.Parent = Page; Tog.Visible = true
+            local Tog = Instance.new("TextButton")
+            Tog.Parent = Page
+            Tog.Name = "Toggle"
             Tog.BackgroundColor3 = THEME.Section
+            Tog.BorderColor3 = THEME.Border
+            Tog.BorderSizePixel = 1
+            Tog.TextSize = 13
+            Tog.Font = Enum.Font.GothamBold
+            Tog.Size = UDim2.new(1, 0, 0, 30)
             
             local function Update()
                 Tog.Text = Text .. ": " .. (Enabled and "[ ON ]" or "[ OFF ]")
@@ -206,35 +258,73 @@ function ImGui:CreateWindow(Config)
             Update()
             return Tog
         end
-
+        
         function Elements:Slider(Text, Min, Max, Default, Callback)
-            local Sld = UI.Prefabs.Slider:Clone()
-            Sld.Parent = Page; Sld.Visible = true
-            Sld.Label.Text = Text; Sld.BackgroundColor3 = THEME.Section
+            local Container = Instance.new("Frame")
+            Container.Parent = Page
+            Container.Name = "SliderContainer"
+            Container.BackgroundTransparency = 1
+            Container.BorderSizePixel = 0
+            Container.Size = UDim2.new(1, 0, 0, 50)
+            
+            local Label = Instance.new("TextLabel")
+            Label.Parent = Container
+            Label.Name = "Label"
+            Label.Text = Text .. ": " .. (Default or Min)
+            Label.BackgroundTransparency = 1
+            Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Label.TextSize = 12
+            Label.Font = Enum.Font.Gotham
+            Label.Size = UDim2.new(1, 0, 0, 16)
+            
+            local SliderBg = Instance.new("Frame")
+            SliderBg.Parent = Container
+            SliderBg.Name = "SliderBg"
+            SliderBg.BackgroundColor3 = THEME.Section
+            SliderBg.BorderColor3 = THEME.Border
+            SliderBg.BorderSizePixel = 1
+            SliderBg.Size = UDim2.new(1, 0, 0, 12)
+            SliderBg.Position = UDim2.new(0, 0, 0, 20)
+            
+            local Grab = Instance.new("Frame")
+            Grab.Parent = SliderBg
+            Grab.Name = "Grab"
+            Grab.BackgroundColor3 = THEME.Accent
+            Grab.BorderColor3 = THEME.Border
+            Grab.BorderSizePixel = 1
+            Grab.Size = UDim2.new(0, 8, 1, 0)
             
             local function Set(val)
-                local perc = math.clamp((val - Min) / (Max - Min), 0, 1)
-                Sld.Grab.Position = UDim2.fromScale(perc, 0.5)
-                Callback(math.floor(Min + (Max - Min) * perc))
+                val = math.clamp(math.floor(val), Min, Max)
+                local perc = (val - Min) / (Max - Min)
+                Grab.Position = UDim2.fromScale(perc, 0)
+                Label.Text = Text .. ": " .. val
+                Callback(val)
             end
             
-            Sld.MouseButton1Down:Connect(function()
-                local move; move = UserInputService.InputChanged:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseMovement then
-                        local perc = math.clamp((i.Position.X - Sld.AbsolutePosition.X) / Sld.AbsoluteSize.X, 0, 1)
-                        Set(Min + (Max - Min) * perc)
-                    end
-                end)
-                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end end)
+            SliderBg.InputBegan:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    local move; move = UserInputService.InputChanged:Connect(function(e)
+                        if e.UserInputType == Enum.UserInputType.MouseMovement then
+                            local perc = math.clamp((e.Position.X - SliderBg.AbsolutePosition.X) / SliderBg.AbsoluteSize.X, 0, 1)
+                            Set(Min + (Max - Min) * perc)
+                        end
+                    end)
+                    UserInputService.InputEnded:Connect(function(e)
+                        if e.UserInputType == Enum.UserInputType.MouseButton1 then
+                            move:Disconnect()
+                        end
+                    end)
+                end
             end)
+            
             Set(Default or Min)
-            return Sld
+            return Container
         end
-
+        
         return Elements
     end
-
-    Window.Size = Config.Size or UDim2.fromOffset(450, 350)
+    
     return Lib
 end
 
