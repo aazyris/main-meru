@@ -67,7 +67,9 @@ function ImGui:CreateWindow(Config)
     
     if ResizeBtn then
         ResizeBtn.BackgroundColor3 = THEME.Background
-        ResizeBtn.ImageColor3 = THEME.Accent
+        if ResizeBtn:IsA("ImageButton") or ResizeBtn:IsA("ImageLabel") then
+            ResizeBtn.ImageColor3 = THEME.Accent
+        end
     end
 
     -- Interaction: Smooth Drag & Smooth Resize
