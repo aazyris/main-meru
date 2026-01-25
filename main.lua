@@ -1,4 +1,4 @@
---// Depso Pro: Animated Hub Edition
+--// Depso Pro: Animated Hub Edition (Fixed & Polished)
 local Lib = { Windows = {} }
 
 local UIS = game:GetService("UserInputService")
@@ -8,7 +8,7 @@ local CoreGui = game:GetService("CoreGui")
 local Theme = {
     Main = Color3.fromRGB(15, 15, 20),
     Dark = Color3.fromRGB(10, 10, 12),
-    Accent = Color3.fromRGB(110, 115, 255), -- Modern Blue/Purple
+    Accent = Color3.fromRGB(110, 115, 255),
     Text = Color3.fromRGB(255, 255, 255),
     Font = Enum.Font.GothamMedium
 }
@@ -27,7 +27,15 @@ end
 
 function Lib:CreateWindow(title)
     local Screen = create("ScreenGui", {Parent = CoreGui, Name = "DepsoHub", ResetOnSpawn = false})
-    local Main = create("Frame", {Parent = Screen, Size = UDim2.fromOffset(520, 360), Position = UDim2.fromOffset(100, 100), BackgroundColor3 = Theme.Main, ClampingScrollSteps = 20})
+    
+    -- Fixed: Removed ClampingScrollSteps from regular Frame
+    local Main = create("Frame", {
+        Parent = Screen, 
+        Size = UDim2.fromOffset(520, 360), 
+        Position = UDim2.fromOffset(100, 100), 
+        BackgroundColor3 = Theme.Main,
+        BorderSizePixel = 0
+    })
     create("UICorner", {Parent = Main, CornerRadius = UDim.new(0, 10)})
     create("UIStroke", {Parent = Main, Color = Theme.Accent, Transparency = 0.6, Thickness = 1.2})
 
@@ -41,7 +49,6 @@ function Lib:CreateWindow(title)
 
     local Container = create("Frame", {Parent = Main, Size = UDim2.new(1, -180, 1, -60), Position = UDim2.fromOffset(170, 50), BackgroundTransparency = 1})
 
-    -- Dragging logic
     local d, s, st
     Header.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d, st, s = true, i.Position, Main.Position end end)
     UIS.InputChanged:Connect(function(i) if d and i.UserInputType == Enum.UserInputType.MouseMovement then
@@ -50,7 +57,8 @@ function Lib:CreateWindow(title)
     end end)
     UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d = false end end)
 
-    local API = {}
+    local API = { FirstPage = nil }
+    
     function API:Category(name)
         local Page = create("ScrollingFrame", {Parent = Container, Size = UDim2.new(1, 0, 1, 0), Visible = false, BackgroundTransparency = 1, CanvasSize = UDim2.new(0,0,0,0), AutomaticCanvasSize = "Y", ScrollBarThickness = 0})
         create("UIListLayout", {Parent = Page, Padding = UDim.new(0, 8)})
@@ -64,14 +72,12 @@ function Lib:CreateWindow(title)
             Page.Visible = true
             tween(TabBtn, 0.3, {BackgroundTransparency = 0.2, TextColor3 = Theme.Text})
         end)
-        if not API.First then API.First = true; Page.Visible = true; tween(TabBtn, 0, {BackgroundTransparency = 0.2, TextColor3 = Theme.Text}) end
+        
+        if not API.FirstPage then API.FirstPage = Page; Page.Visible = true; tween(TabBtn, 0, {BackgroundTransparency = 0.2, TextColor3 = Theme.Text}) end
 
-        local Entry = {}
-
-        -- Toggle (Better than Checkbox)
-        function Entry:Toggle(txt, cb)
+        local function AddToggle(parent, txt, cb)
             local enabled = false
-            local b = create("TextButton", {Parent = Page, Size = UDim2.new(1, -5, 0, 35), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.3, Text = "  "..txt, Font = Theme.Font, TextSize = 13, TextColor3 = Theme.Text, TextXAlignment = "Left"})
+            local b = create("TextButton", {Parent = parent, Size = UDim2.new(1, -5, 0, 35), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.3, Text = "  "..txt, Font = Theme.Font, TextSize = 13, TextColor3 = Theme.Text, TextXAlignment = "Left"})
             create("UICorner", {Parent = b, CornerRadius = UDim.new(0, 6)})
             
             local box = create("Frame", {Parent = b, Size = UDim2.fromOffset(34, 18), Position = UDim2.new(1, -45, 0.5, -9), BackgroundColor3 = Color3.fromRGB(40, 40, 45)})
@@ -87,7 +93,15 @@ function Lib:CreateWindow(title)
             end)
         end
 
-        -- Smooth Slider
+        local Entry = {}
+        function Entry:Toggle(txt, cb) AddToggle(Page, txt, cb) end
+
+        function Entry:Button(txt, cb)
+            local b = create("TextButton", {Parent = Page, Size = UDim2.new(1, -5, 0, 35), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.3, Text = txt, Font = Theme.Font, TextSize = 13, TextColor3 = Theme.Text})
+            create("UICorner", {Parent = b, CornerRadius = UDim.new(0, 6)})
+            b.MouseButton1Click:Connect(cb)
+        end
+
         function Entry:Slider(txt, min, max, def, cb)
             local SFrame = create("Frame", {Parent = Page, Size = UDim2.new(1, -5, 0, 50), BackgroundTransparency = 1})
             local lab = create("TextLabel", {Parent = SFrame, Text = txt.." • "..def, Size = UDim2.new(1,0,0,20), BackgroundTransparency = 1, TextColor3 = Theme.Text, Font = Theme.Font, TextSize = 12, TextXAlignment = "Left"})
@@ -109,7 +123,6 @@ function Lib:CreateWindow(title)
             UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
         end
 
-        -- FOLDER (Expandable Section)
         function Entry:Folder(name)
             local expanded = false
             local FMain = create("Frame", {Parent = Page, Size = UDim2.new(1, -5, 0, 35), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.5, ClipsDescendants = true})
@@ -124,15 +137,16 @@ function Lib:CreateWindow(title)
             HeaderBtn.MouseButton1Click:Connect(function()
                 expanded = not expanded
                 HeaderBtn.Text = expanded and "  ▲ "..name or "  ▼ "..name
-                tween(FMain, 0.4, {Size = expanded and UDim2.new(1, -5, 0, ContentFrame.AbsoluteSize.Y + 40) or UDim2.new(1, -5, 0, 35)})
+                tween(FMain, 0.4, {Size = expanded and UDim2.new(1, -5, 0, ContentFrame.AbsoluteSize.Y + 45) or UDim2.new(1, -5, 0, 35)})
             end)
 
-            -- This allows us to add items INSIDE the folder
             local FolderAPI = {}
             function FolderAPI:Button(t, c) 
-                create("TextButton", {Parent = ContentFrame, Size = UDim2.new(1,0,0,30), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8, Text = t, Font = Theme.Font, TextColor3 = Theme.Text, TextSize = 12}).MouseButton1Click:Connect(c)
+                local b = create("TextButton", {Parent = ContentFrame, Size = UDim2.new(1,0,0,30), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8, Text = t, Font = Theme.Font, TextColor3 = Theme.Text, TextSize = 12})
+                create("UICorner", {Parent = b, CornerRadius = UDim.new(0, 4)})
+                b.MouseButton1Click:Connect(c)
             end
-            function FolderAPI:Toggle(t, c) Entry.Toggle({Page = ContentFrame}, t, c) end -- Reusing Toggle
+            function FolderAPI:Toggle(t, c) AddToggle(ContentFrame, t, c) end
             return FolderAPI
         end
 
