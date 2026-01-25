@@ -64,7 +64,6 @@ function ImGui:CreateWindow(Config)
     TitleText.Font = Enum.Font.GothamBold
     TitleText.Size = UDim2.new(1, -40, 1, 0)
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
-    TitleText.Padding = UDim.new(0, 8)
     
     -- Minimize Button
     local MinBtn = Instance.new("TextButton")
