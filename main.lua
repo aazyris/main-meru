@@ -74,21 +74,33 @@ function ImGui:CreateWindow(Config)
     local function SetupInteractions()
         local Dragging, Resizing, DragStart, ResizeStart, StartPos, StartSize
         
-        TitleBar.MouseEnter:Connect(function()
-            TitleBar.BackgroundTransparency = 0.9
+        -- Debug: Print UI structure
+        print("Window children:", Window:GetChildren())
+        print("Content children:", Content:GetChildren())
+        print("TitleBar:", TitleBar)
+        print("TitleBar children:", TitleBar:GetChildren())
+        
+        -- Try different drag targets
+        local DragTarget = TitleBar:FindFirstChild("Left") or TitleBar
+        
+        DragTarget.MouseEnter:Connect(function()
+            DragTarget.BackgroundTransparency = 0.9
+            print("Mouse entered drag target")
         end)
         
-        TitleBar.MouseLeave:Connect(function()
+        DragTarget.MouseLeave:Connect(function()
             if not Dragging then
-                TitleBar.BackgroundTransparency = 1
+                DragTarget.BackgroundTransparency = 1
             end
         end)
         
-        TitleBar.InputBegan:Connect(function(i)
+        DragTarget.InputBegan:Connect(function(i)
+            print("Input began on drag target:", i.UserInputType)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then
                 Dragging = true
                 DragStart = i.Position
                 StartPos = Window.Position
+                print("Started dragging")
             end
         end)
 
@@ -98,6 +110,7 @@ function ImGui:CreateWindow(Config)
                     Resizing = true
                     ResizeStart = i.Position
                     StartSize = Window.AbsoluteSize
+                    print("Started resizing")
                 end
             end)
         end
@@ -126,45 +139,64 @@ function ImGui:CreateWindow(Config)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then
                 Dragging = false
                 Resizing = false
-                TitleBar.BackgroundTransparency = 1
+                DragTarget.BackgroundTransparency = 1
+                print("Ended drag/resize")
             end
         end)
     end
     SetupInteractions()
 
     -- Working Minimize/Expand System
-    local Arrow = TitleBar.Left.Toggle.ToggleButton
-    local IsMinimized = false
-    local OriginalSize = Config.Size or UDim2.fromOffset(450, 350)
-    local MinimizedSize = UDim2.fromOffset(OriginalSize.X.Offset, 32)
+    local Arrow = nil
+    -- Find the arrow button in different possible locations
+    Arrow = TitleBar:FindFirstChild("Left", true):FindFirstChild("Toggle", true):FindFirstChild("ToggleButton")
+    if not Arrow then
+        Arrow = TitleBar:FindFirstChild("ToggleButton", true)
+    end
+    if not Arrow then
+        Arrow = Window:FindFirstChild("ToggleButton", true)
+    end
     
-    Arrow.Rotation = 90
-    Arrow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    Arrow.BackgroundTransparency = 0.5
+    print("Found arrow:", Arrow)
     
-    Arrow.MouseEnter:Connect(function()
-        Arrow.BackgroundTransparency = 0.2
-    end)
-    
-    Arrow.MouseLeave:Connect(function()
-        Arrow.BackgroundTransparency = 0.5
-    end)
-    
-    Arrow.Activated:Connect(function()
-        IsMinimized = not IsMinimized
+    if Arrow then
+        local IsMinimized = false
+        local OriginalSize = Config.Size or UDim2.fromOffset(450, 350)
+        local MinimizedSize = UDim2.fromOffset(OriginalSize.X.Offset, 32)
         
-        if IsMinimized then
-            -- Minimize
-            Body.Visible = false
-            Window.Size = MinimizedSize
-            Arrow.Rotation = 0
-        else
-            -- Expand
-            Body.Visible = true
-            Window.Size = OriginalSize
-            Arrow.Rotation = 90
-        end
-    end)
+        Arrow.Rotation = 90
+        Arrow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+        Arrow.BackgroundTransparency = 0.5
+        
+        Arrow.MouseEnter:Connect(function()
+            Arrow.BackgroundTransparency = 0.2
+        end)
+        
+        Arrow.MouseLeave:Connect(function()
+            Arrow.BackgroundTransparency = 0.5
+        end)
+        
+        Arrow.Activated:Connect(function()
+            print("Arrow clicked")
+            IsMinimized = not IsMinimized
+            
+            if IsMinimized then
+                -- Minimize
+                Body.Visible = false
+                Window.Size = MinimizedSize
+                Arrow.Rotation = 0
+                print("Minimized")
+            else
+                -- Expand
+                Body.Visible = true
+                Window.Size = OriginalSize
+                Arrow.Rotation = 90
+                print("Expanded")
+            end
+        end)
+    else
+        warn("Could not find arrow button!")
+    end
 
     -- Toggle Keybind
     UserInputService.InputBegan:Connect(function(input, gpe)
