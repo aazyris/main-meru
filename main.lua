@@ -15,20 +15,20 @@ local CoreGui = game:GetService("CoreGui")
 local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
 local RunService = game:GetService("RunService")
 
---// Theme Configuration (Strict Black)
+--// Strict Black Theme
 local THEME = {
-    Background = Color3.fromRGB(12, 12, 12), -- Deep Black
-    Section = Color3.fromRGB(18, 18, 18),    -- Slightly lighter for options
-    Border = Color3.fromRGB(30, 30, 30),     -- Dark Grey border
-    Text = Color3.fromRGB(255, 255, 255),
-    Accent = Color3.fromRGB(40, 40, 40)      -- For hover effects
+    Background = Color3.fromRGB(12, 12, 12),
+    Section = Color3.fromRGB(18, 18, 18),
+    Border = Color3.fromRGB(25, 25, 25),
+    Text = Color3.fromRGB(255, 255, 255)
 }
 
 local IsStudio = RunService:IsStudio()
 local GuiParent = IsStudio and PlayerGui or CoreGui
 
---// Helper: Smooth Dragging
-local function MakeDraggable(Frame, Handle)
+--// Utility: Dragging and Resizing Logic
+local function ApplyInteractions(Frame, Handle, ResizeHandle)
+    -- Draggable
     local Dragging, DragInput, DragStart, StartPos
     Handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -37,30 +37,44 @@ local function MakeDraggable(Frame, Handle)
             StartPos = Frame.Position
         end
     end)
-    Handle.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then DragInput = input end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == DragInput and Dragging then
-            local delta = input.Position - DragStart
-            Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y)
+    -- Resizable
+    local Resizing, ResizeStart, StartSize
+    ResizeHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Resizing = true
+            ResizeStart = input.Position
+            StartSize = Frame.AbsoluteSize
         end
     end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            if Dragging then
+                local delta = input.Position - DragStart
+                Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + delta.X, StartPos.Y.Scale, StartPos.Y.Offset + delta.Y)
+            elseif Resizing then
+                local delta = input.Position - ResizeStart
+                Frame.Size = UDim2.fromOffset(math.max(200, StartSize.X + delta.X), math.max(100, StartSize.Y + delta.Y))
+            end
+        end
+    end)
+
     UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then 
+            Dragging = false 
+            Resizing = false
+        end
     end)
 end
 
---// Engine Setup
 function ImGui:CreateWindow(Config)
     local UI = game:GetObjects(self.UIAssetId)[1]
     local Window = UI.Prefabs.Window:Clone()
     local Screen = Instance.new("ScreenGui", GuiParent)
-    Screen.Name = "ImGui_Blackout"
+    Screen.Name = "Blackout_" .. (Config.Title or "Menu")
     
     Window.Parent = Screen
     Window.BackgroundColor3 = THEME.Background
-    Window.BorderSizePixel = 1
     Window.BorderColor3 = THEME.Border
     Window.ClipsDescendants = true
     
@@ -68,31 +82,31 @@ function ImGui:CreateWindow(Config)
     local Body = Content.Body
     local TitleBar = Content.TitleBar
     local ToolBar = Content.ToolBar
-    
-    -- Color Synchronization
-    Body.BackgroundColor3 = THEME.Background
-    ToolBar.BackgroundColor3 = THEME.Background -- Sidebar now matches options
-    TitleBar.BackgroundColor3 = THEME.Background
-    TitleBar.Left.Title.Text = Config.Title or "Main Menu"
-    
-    MakeDraggable(Window, TitleBar)
+    local ResizeBtn = Window:FindFirstChild("ResizeGrab") or Window:FindFirstChild("Resize", true)
 
-    -- Fixed Minimize (Dark & Compact)
+    -- Sync Colors (No Split)
+    Body.BackgroundColor3 = THEME.Background
+    ToolBar.BackgroundColor3 = THEME.Background
+    TitleBar.BackgroundColor3 = THEME.Background
+    TitleBar.Left.Title.Text = Config.Title or "Menu"
+    
+    ApplyInteractions(Window, TitleBar, ResizeBtn)
+
+    -- Improved Minimize (Dark)
     local IsMinimized = false
     local StoredHeight = Config.Size and Config.Size.Y.Offset or 350
     
     TitleBar.Left.Toggle.ToggleButton.Activated:Connect(function()
         IsMinimized = not IsMinimized
-        local TargetHeight = IsMinimized and 35 or StoredHeight
-        
-        if not IsMinimized then Body.Visible = true end
-        
-        local t = TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, TargetHeight)})
-        t:Play()
-        
-        t.Completed:Connect(function()
-            if IsMinimized then Body.Visible = false end
-        end)
+        if not IsMinimized then 
+            Body.Visible = true 
+            TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, StoredHeight)}):Play()
+        else
+            StoredHeight = Window.Size.Y.Offset
+            local t = TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, 32)})
+            t:Play()
+            t.Completed:Connect(function() if IsMinimized then Body.Visible = false end end)
+        end
     end)
 
     local Lib = {}
@@ -103,7 +117,6 @@ function ImGui:CreateWindow(Config)
         TabBtn.Parent = ToolBar
         TabBtn.Text = Name
         TabBtn.BackgroundColor3 = THEME.Background
-        TabBtn.BorderColor3 = THEME.Border
         TabBtn.Visible = true
 
         local Page = Body.Template:Clone()
@@ -111,20 +124,17 @@ function ImGui:CreateWindow(Config)
         Page.Visible = false
         Page.BackgroundColor3 = THEME.Background
 
-        -- Fix Category Switching Glitch
         TabBtn.Activated:Connect(function()
             if CurrentPage then CurrentPage.Visible = false end
             Page.Visible = true
             CurrentPage = Page
-            
-            -- Visual feedback for active tab
-            for _, btn in pairs(ToolBar:GetChildren()) do
-                if btn:IsA("TextButton") then btn.BackgroundTransparency = 1 end
-            end
+            -- Reset other tab colors
+            for _, b in pairs(ToolBar:GetChildren()) do if b:IsA("TextButton") then b.BackgroundTransparency = 1 end end
             TabBtn.BackgroundTransparency = 0.8
+            TabBtn.BackgroundColor3 = THEME.Section
         end)
 
-        -- Default first tab
+        -- Initialize First Tab
         if not CurrentPage then
             Page.Visible = true
             CurrentPage = Page
@@ -132,7 +142,6 @@ function ImGui:CreateWindow(Config)
         end
 
         local Elements = {}
-
         function Elements:Button(Text, Callback)
             local Btn = UI.Prefabs.Button:Clone()
             Btn.Parent = Page
@@ -150,25 +159,16 @@ function ImGui:CreateWindow(Config)
             Sld.Label.Text = Text
             Sld.BackgroundColor3 = THEME.Section
             Sld.Visible = true
-            
-            local Grab = Sld.Grab
-            local function Update(val)
-                local perc = math.clamp((val - Min) / (Max - Min), 0, 1)
-                Grab.Position = UDim2.fromScale(perc, 0.5)
-                Callback(val)
-            end
-            
+            -- Simplified Slider Logic
             Sld.MouseButton1Down:Connect(function()
                 local move; move = UserInputService.InputChanged:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseMovement then
-                        local relativeX = input.Position.X - Sld.AbsolutePosition.X
-                        local perc = math.clamp(relativeX / Sld.AbsoluteSize.X, 0, 1)
-                        Update(Min + (Max - Min) * perc)
+                        local perc = math.clamp((input.Position.X - Sld.AbsolutePosition.X) / Sld.AbsoluteSize.X, 0, 1)
+                        Sld.Grab.Position = UDim2.fromScale(perc, 0.5)
+                        Callback(math.floor(Min + (Max - Min) * perc))
                     end
                 end)
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end
-                end)
+                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end end)
             end)
             return Sld
         end
