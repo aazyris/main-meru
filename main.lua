@@ -44,7 +44,12 @@ function ImGui:Notify(Title, Text)
 end
 
 function ImGui:CreateWindow(Config)
-    local UI = game:GetObjects(self.UIAssetId)[1]
+    local success, UI = pcall(function() return game:GetObjects(self.UIAssetId)[1] end)
+    if not success or not UI then
+        self:Notify("Error", "Failed to load UI assets")
+        return nil
+    end
+    
     local Window = UI.Prefabs.Window:Clone()
     local Screen = Instance.new("ScreenGui", GuiParent)
     Screen.Name = "Hub_" .. (Config.Title or "Main")
@@ -63,7 +68,7 @@ function ImGui:CreateWindow(Config)
     Body.BackgroundColor3 = THEME.Background
     ToolBar.BackgroundColor3 = THEME.Background
     TitleBar.BackgroundColor3 = THEME.Background
-    TitleBar.Left.Title.Text = Config.Title or "Hub Menu"
+    pcall(function() TitleBar.Left.Title.Text = Config.Title or "Hub Menu" end)
     
     -- Safe ResizeBtn handling
     if ResizeBtn then
