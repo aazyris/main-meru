@@ -1,273 +1,225 @@
---// Depso Classic: Translucent Edition (Library)
-local DepsoLib = { Windows = {} }
+--// Written by depso
+--// MIT License
+--// Copyright (c) 2024 Depso
 
-local UIS = game:GetService("UserInputService")
-local TS = game:GetService("TweenService")
-local Players = game:GetService("Players")
-local CoreGui = game:GetService("CoreGui")
-
---// Theme Configuration
-local Theme = {
-    MainColor = Color3.fromRGB(20, 20, 25),
-    Transparency = 0.25,
-    DarkerColor = Color3.fromRGB(15, 15, 20),
-    AccentColor = Color3.fromRGB(80, 80, 90),
-    BorderColor = Color3.fromRGB(255, 255, 255),
-    BorderTransparency = 0.8,
-    TextColor = Color3.fromRGB(230, 230, 230),
-    Font = Enum.Font.Code,
+local ImGui = {
+    Animations = {
+        Buttons = {
+            MouseEnter = {BackgroundTransparency = 0.5},
+            MouseLeave = {BackgroundTransparency = 0.7}
+        },
+        Tabs = {
+            MouseEnter = {BackgroundTransparency = 0.5},
+            MouseLeave = {BackgroundTransparency = 1}
+        },
+    },
+    Windows = {},
+    Animation = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    UIAssetId = "rbxassetid://76246418997296"
 }
 
---// Helper: Smooth Dragging
-local function MakeDraggable(frame, handle)
-    local dragStart, startPos
-    local dragging = false
+--// Services 
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-        end
-    end)
+--// Local Variables
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Mouse = LocalPlayer:GetMouse()
+local IsStudio = RunService:IsStudio()
+local NullFunction = function() end
 
-    UIS.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            TS:Create(frame, TweenInfo.new(0.08, Enum.EasingStyle.Quint), {
-                Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            }):Play()
-        end
-    end)
+--// Colors (Forced Black Theme)
+local THEME = {
+    Main = Color3.fromRGB(15, 15, 15),
+    Darker = Color3.fromRGB(10, 10, 10),
+    Border = Color3.fromRGB(30, 30, 30),
+    Accent = Color3.fromRGB(255, 255, 255)
+}
 
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
+--// Prefabs
+function ImGui:FetchUI()
+    local CacheName = "DepsoImGui"
+    if _G[CacheName] then return _G[CacheName] end
+
+    local UI = nil
+    if not IsStudio then
+        UI = game:GetObjects(ImGui.UIAssetId)[1]
+    else
+        UI = PlayerGui:FindFirstChild("DepsoImGui") or (script:FindFirstChild("DepsoImGui"))
+    end
+
+    _G[CacheName] = UI
+    return UI
 end
 
---// Helper: Resize Logic
-local function MakeResizable(frame, handle)
-    local dragging = false
-    local startSize, startMousePos
+local UI = ImGui:FetchUI()
+local Prefabs = UI.Prefabs
+Prefabs.Visible = false
 
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            startSize = frame.Size
-            startMousePos = input.Position
+--// Internal Utilities
+local function ApplyTheme(Obj)
+    if Obj:IsA("GuiObject") then
+        Obj.BackgroundColor3 = THEME.Main
+        Obj.BorderColor3 = THEME.Border
+        if Obj:IsA("TextLabel") or Obj:IsA("TextButton") then
+            Obj.TextColor3 = THEME.Accent
         end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - startMousePos
-            frame.Size = UDim2.new(0, math.max(220, startSize.X.Offset + delta.X), 0, math.max(100, startSize.Y.Offset + delta.Y))
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
+    end
 end
 
-function DepsoLib:CreateWindow(title)
-    local MenuTag = "Depso_" .. title:gsub("%s+", "")
-    if CoreGui:FindFirstChild(MenuTag) then CoreGui[MenuTag]:Destroy() end
+function ImGui:MergeMetatables(Class, Instance)
+    return setmetatable({}, {
+        __index = function(_, k)
+            local s, v = pcall(function() return Instance[k] end)
+            if s and typeof(v) == "function" then return function(_, ...) return v(Instance, ...) end end
+            return (s and v ~= nil) and v or Class[k]
+        end,
+        __newindex = function(_, k, v) if Class[k] ~= nil then Class[k] = v else Instance[k] = v end end
+    })
+end
 
-    local Screen = Instance.new("ScreenGui", CoreGui); Screen.Name = MenuTag
+function ImGui:ApplyDraggable(Frame, Header)
+    local Dragging, StartPos, FramePos
+    Header.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging, StartPos, FramePos = true, i.Position, Frame.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if Dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local Delta = i.Position - StartPos
+            Frame.Position = UDim2.new(FramePos.X.Scale, FramePos.X.Offset + Delta.X, FramePos.Y.Scale, FramePos.Y.Offset + Delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+end
 
-    -- Main Window
-    local Main = Instance.new("Frame", Screen)
-    Main.Size = UDim2.fromOffset(300, 350)
-    Main.Position = UDim2.fromOffset(100, 100)
-    Main.BackgroundColor3 = Theme.MainColor
-    Main.BackgroundTransparency = Theme.Transparency
-    Main.ClipsDescendants = true
+--// UI Class
+function ImGui:ContainerClass(Frame, Window)
+    local Container = {}
     
-    local MainStroke = Instance.new("UIStroke", Main)
-    MainStroke.Color = Theme.BorderColor
-    MainStroke.Transparency = Theme.BorderTransparency
-
-    -- Title Bar
-    local TitleBar = Instance.new("Frame", Main)
-    TitleBar.Size = UDim2.new(1, 0, 0, 30)
-    TitleBar.BackgroundColor3 = Theme.DarkerColor
-    TitleBar.BorderSizePixel = 0
-
-    local TitleLabel = Instance.new("TextLabel", TitleBar)
-    TitleLabel.Size = UDim2.new(1, -60, 1, 0)
-    TitleLabel.Position = UDim2.fromOffset(10, 0)
-    TitleLabel.Text = title:upper()
-    TitleLabel.Font = Theme.Font
-    TitleLabel.TextSize = 14
-    TitleLabel.TextColor3 = Theme.TextColor
-    TitleLabel.BackgroundTransparency = 1
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    -- Minimize Arrow
-    local MinBtn = Instance.new("TextButton", TitleBar)
-    MinBtn.Size = UDim2.fromOffset(30, 30)
-    MinBtn.Position = UDim2.new(1, -30, 0, 0)
-    MinBtn.BackgroundTransparency = 1
-    MinBtn.Text = "▼"
-    MinBtn.TextColor3 = Theme.TextColor
-    MinBtn.Font = Theme.Font
-    MinBtn.TextSize = 12
-
-    -- Resize Handle
-    local ResizeHandle = Instance.new("TextButton", Main)
-    ResizeHandle.Size = UDim2.fromOffset(15, 15)
-    ResizeHandle.Position = UDim2.new(1, -15, 1, -15)
-    ResizeHandle.BackgroundTransparency = 1
-    ResizeHandle.Text = "◢"
-    ResizeHandle.TextColor3 = Theme.TextColor
-    ResizeHandle.TextTransparency = 0.5
-    ResizeHandle.ZIndex = 5
-
-    local Content = Instance.new("ScrollingFrame", Main)
-    Content.Size = UDim2.new(1, -10, 1, -40)
-    Content.Position = UDim2.fromOffset(5, 35)
-    Content.BackgroundTransparency = 1
-    Content.BorderSizePixel = 0
-    Content.ScrollBarThickness = 2
-    Content.ScrollBarImageColor3 = Theme.AccentColor
-    Content.CanvasSize = UDim2.new(0, 0, 0, 0)
-    Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-
-    local Layout = Instance.new("UIListLayout", Content)
-    Layout.Padding = UDim.new(0, 6)
-    Layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-    MakeDraggable(Main, TitleBar)
-    MakeResizable(Main, ResizeHandle)
-
-    local minimized = false
-    local oldSize = Main.Size
-    MinBtn.MouseButton1Click:Connect(function()
-        minimized = not minimized
-        Content.Visible = not minimized
-        ResizeHandle.Visible = not minimized
-        if minimized then
-            oldSize = Main.Size
-            TS:Create(Main, TweenInfo.new(0.3), {Size = UDim2.fromOffset(Main.Size.X.Offset, 30)}):Play()
-        else
-            TS:Create(Main, TweenInfo.new(0.3), {Size = oldSize}):Play()
-        end
-        MinBtn.Text = minimized and "▲" or "▼"
-    end)
-
-    local Elements = {}
-
-    --// Element: Label
-    function Elements:Label(text)
-        local Lab = Instance.new("TextLabel", Content)
-        Lab.Size = UDim2.new(1, -10, 0, 20)
-        Lab.BackgroundTransparency = 1
-        Lab.Text = text
-        Lab.Font = Theme.Font
-        Lab.TextColor3 = Theme.TextColor
-        Lab.TextSize = 12
-        Lab.TextXAlignment = Enum.TextXAlignment.Left
+    function Container:Button(Config)
+        local Btn = Prefabs.Button:Clone()
+        Btn.Parent = Frame
+        Btn.Text = Config.Text or "Button"
+        Btn.Visible = true
+        ApplyTheme(Btn)
+        Btn.Activated:Connect(function() (Config.Callback or NullFunction)() end)
+        return Btn
     end
 
-    --// Element: Button
-    function Elements:Button(text, callback)
-        local Btn = Instance.new("TextButton", Content)
-        Btn.Size = UDim2.new(1, -10, 0, 28)
-        Btn.BackgroundColor3 = Theme.AccentColor
-        Btn.BackgroundTransparency = 0.7
-        Btn.Text = text
-        Btn.Font = Theme.Font
-        Btn.TextColor3 = Theme.TextColor
-        Btn.TextSize = 12
-        
-        Btn.MouseButton1Click:Connect(function()
-            Btn.BackgroundTransparency = 0.4
-            task.wait(0.1)
-            Btn.BackgroundTransparency = 0.7
-            callback()
-        end)
+    function Container:Label(Config)
+        local Lbl = Prefabs.Label:Clone()
+        Lbl.Parent = Frame
+        Lbl.Text = Config.Text or "Label"
+        Lbl.Visible = true
+        ApplyTheme(Lbl)
+        return Lbl
     end
 
-    --// Element: Checkbox
-    function Elements:Checkbox(text, callback)
-        local active = false
-        local Btn = Instance.new("TextButton", Content)
-        Btn.Size = UDim2.new(1, -10, 0, 28)
-        Btn.BackgroundColor3 = Theme.AccentColor
-        Btn.BackgroundTransparency = 0.8
-        Btn.Text = "  [ ] " .. text
-        Btn.Font = Theme.Font
-        Btn.TextColor3 = Theme.TextColor
-        Btn.TextSize = 12
-        Btn.TextXAlignment = Enum.TextXAlignment.Left
-        
-        Btn.MouseButton1Click:Connect(function()
-            active = not active
-            Btn.Text = active and "  [X] " .. text or "  [ ] " .. text
-            Btn.BackgroundTransparency = active and 0.5 or 0.8
-            callback(active)
-        end)
-    end
+    function Container:Slider(Config)
+        local Sld = Prefabs.Slider:Clone()
+        Sld.Parent = Frame
+        Sld.Visible = true
+        ApplyTheme(Sld)
+        local Grab, ValTxt = Sld.Grab, Sld.ValueText
+        local Dragging = false
 
-    --// Element: Slider
-    function Elements:Slider(text, min, max, default, callback)
-        local SFrame = Instance.new("Frame", Content)
-        SFrame.Size = UDim2.new(1, -10, 0, 35)
-        SFrame.BackgroundTransparency = 1
-
-        local SLab = Instance.new("TextLabel", SFrame)
-        SLab.Size = UDim2.new(1, 0, 0, 15)
-        SLab.Text = text .. " : " .. default
-        SLab.Font = Theme.Font
-        SLab.TextColor3 = Theme.TextColor
-        SLab.TextSize = 11
-        SLab.BackgroundTransparency = 1
-        SLab.TextXAlignment = Enum.TextXAlignment.Left
-
-        local Bar = Instance.new("Frame", SFrame)
-        Bar.Size = UDim2.new(1, 0, 0, 10)
-        Bar.Position = UDim2.fromOffset(0, 20)
-        Bar.BackgroundColor3 = Theme.DarkerColor
-        Bar.BorderSizePixel = 0
-
-        local Fill = Instance.new("Frame", Bar)
-        Fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-        Fill.BackgroundColor3 = Theme.AccentColor
-        Fill.BorderSizePixel = 0
-
-        local function UpdateSlider()
-            local mousePos = UIS:GetMouseLocation().X
-            local barPos = Bar.AbsolutePosition.X
-            local barSize = Bar.AbsoluteSize.X
-            local percent = math.clamp((mousePos - barPos) / barSize, 0, 1)
-            local val = math.floor(min + (max - min) * percent)
-            
-            Fill.Size = UDim2.new(percent, 0, 1, 0)
-            SLab.Text = text .. " : " .. val
-            callback(val)
+        local function Set(Val, Ratio)
+            local Min, Max = Config.MinValue or 0, Config.MaxValue or 100
+            local Perc = Ratio and math.clamp(Val, 0, 1) or math.clamp((Val - Min) / (Max - Min), 0, 1)
+            Grab.Position = UDim2.fromScale(Perc, 0.5)
+            local Final = Min + (Max - Min) * Perc
+            ValTxt.Text = (Config.Format or "%.0f"):format(Final)
+            if Config.Callback then Config.Callback(Final) end
         end
 
-        local sliding = false
-        Bar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                sliding = true
-                UpdateSlider()
+        Sld.MouseButton1Down:Connect(function() Dragging = true end)
+        UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then Dragging = false end end)
+        UserInputService.InputChanged:Connect(function(i)
+            if Dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+                Set((i.Position.X - Sld.AbsolutePosition.X) / Sld.AbsoluteSize.X, true)
             end
         end)
-
-        UIS.InputChanged:Connect(function(input)
-            if sliding and input.UserInputType == Enum.UserInputType.MouseMovement then
-                UpdateSlider()
-            end
-        end)
-
-        UIS.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end
-        end)
+        Set(Config.Value or 0)
+        return Sld
     end
 
-    return Elements
+    return Container
 end
 
-return DepsoLib
+function ImGui:CreateWindow(Config)
+    local Screen = Instance.new("ScreenGui", IsStudio and PlayerGui or CoreGui)
+    Screen.Name = "ImGui_" .. (Config.Title or "Menu")
+    Screen.ResetOnSpawn = false
+
+    local Window = Prefabs.Window:Clone()
+    Window.Parent = Screen
+    Window.Visible = true
+    Window.ClipsDescendants = true
+    Window.BackgroundColor3 = THEME.Main
+
+    local Content = Window.Content
+    local Body, TitleBar, ToolBar = Content.Body, Content.TitleBar, Content.ToolBar
+    TitleBar.BackgroundColor3 = THEME.Darker
+    Body.BackgroundColor3 = THEME.Main
+
+    ImGui:ApplyDraggable(Window, TitleBar)
+    TitleBar.Left.Title.Text = Config.Title or "Menu"
+
+    -- Minimize Logic
+    local ToggleBtn = TitleBar.Left.Toggle.ToggleButton
+    local IsMinimized, StoredH = false, Config.Size and Config.Size.Y.Offset or 350
+
+    local function SetOpen(Open)
+        IsMinimized = not Open
+        if Open then
+            Body.Visible = true
+            TweenService:Create(Window, ImGui.Animation, {Size = UDim2.new(Window.Size.X.Scale, Window.Size.X.Offset, 0, StoredH)}):Play()
+            TweenService:Create(ToggleBtn, ImGui.Animation, {Rotation = 90}):Play()
+        else
+            StoredH = Window.Size.Y.Offset
+            TweenService:Create(Window, ImGui.Animation, {Size = UDim2.new(Window.Size.X.Scale, Window.Size.X.Offset, 0, 30)}):Play()
+            TweenService:Create(ToggleBtn, ImGui.Animation, {Rotation = 0}):Play()
+            task.delay(0.15, function() if IsMinimized then Body.Visible = false end end)
+        end
+    end
+
+    ToggleBtn.Activated:Connect(function() SetOpen(IsMinimized) end)
+    TitleBar.Close.Activated:Connect(function() Screen:Destroy() end)
+
+    local WinObj = {
+        CreateTab = function(_, TabConfig)
+            local TabBtn = ToolBar.TabButton:Clone()
+            TabBtn.Parent = ToolBar
+            TabBtn.Text = TabConfig.Name or "Tab"
+            TabBtn.Visible = true
+            ApplyTheme(TabBtn)
+
+            local Page = Body.Template:Clone()
+            Page.Parent = Body
+            Page.Visible = TabConfig.Visible or false
+            Page.BackgroundColor3 = THEME.Main
+
+            TabBtn.Activated:Connect(function()
+                for _, p in next, Body:GetChildren() do if p:IsA("ScrollingFrame") then p.Visible = false end end
+                Page.Visible = true
+            end)
+
+            return ImGui:ContainerClass(Page, Window)
+        end,
+        Center = function()
+            Window.Position = UDim2.new(0.5, -Window.AbsoluteSize.X/2, 0.5, -Window.AbsoluteSize.Y/2)
+        end
+    }
+
+    if Config.Size then Window.Size = Config.Size end
+    WinObj.Center()
+    return WinObj
+end
+
+return ImGui
