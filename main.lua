@@ -70,84 +70,100 @@ function ImGui:CreateWindow(Config)
         ResizeBtn.ImageColor3 = THEME.Accent
     end
 
-    -- Interaction: Smooth Drag & Smooth Resize
+    -- Working Drag & Resize System
     local function SetupInteractions()
         local Dragging, Resizing, DragStart, ResizeStart, StartPos, StartSize
-        local LastUpdate = tick()
+        
+        TitleBar.MouseEnter:Connect(function()
+            TitleBar.BackgroundTransparency = 0.9
+        end)
+        
+        TitleBar.MouseLeave:Connect(function()
+            if not Dragging then
+                TitleBar.BackgroundTransparency = 1
+            end
+        end)
         
         TitleBar.InputBegan:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                Dragging, DragStart, StartPos = true, i.Position, Window.Position
+                Dragging = true
+                DragStart = i.Position
+                StartPos = Window.Position
             end
         end)
 
-        ResizeBtn.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                Resizing, ResizeStart, StartSize = true, i.Position, Window.AbsoluteSize
-            end
-        end)
+        if ResizeBtn then
+            ResizeBtn.InputBegan:Connect(function(i)
+                if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                    Resizing = true
+                    ResizeStart = i.Position
+                    StartSize = Window.AbsoluteSize
+                end
+            end)
+        end
 
         UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
-                local Now = tick()
-                if Now - LastUpdate < 0.016 then return end -- 60 FPS cap
-                LastUpdate = Now
-                
                 if Dragging then
                     local Delta = i.Position - DragStart
-                    local NewPos = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-                    TweenService:Create(Window, TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = NewPos}):Play()
-                elseif Resizing then
+                    Window.Position = UDim2.new(
+                        StartPos.X.Scale, 
+                        StartPos.X.Offset + Delta.X, 
+                        StartPos.Y.Scale, 
+                        StartPos.Y.Offset + Delta.Y
+                    )
+                elseif Resizing and ResizeBtn then
                     local Delta = i.Position - ResizeStart
-                    local NewSize = UDim2.fromOffset(math.max(250, StartSize.X + Delta.X), math.max(150, StartSize.Y + Delta.Y))
-                    TweenService:Create(Window, TweenInfo.new(0.05, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = NewSize}):Play()
+                    Window.Size = UDim2.fromOffset(
+                        math.max(250, StartSize.X + Delta.X), 
+                        math.max(150, StartSize.Y + Delta.Y)
+                    )
                 end
             end
         end)
 
         UserInputService.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then 
-                Dragging, Resizing = false, false
+            if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                Dragging = false
+                Resizing = false
+                TitleBar.BackgroundTransparency = 1
             end
         end)
     end
     SetupInteractions()
 
-    -- Correct Arrow Rotation & Full Minimize
+    -- Working Minimize/Expand System
     local Arrow = TitleBar.Left.Toggle.ToggleButton
     local IsMinimized = false
-    local StoredY = Config.Size and Config.Size.Y.Offset or 350
-    local OriginalSize = Window.Size
+    local OriginalSize = Config.Size or UDim2.fromOffset(450, 350)
+    local MinimizedSize = UDim2.fromOffset(OriginalSize.X.Offset, 32)
     
-    Arrow.Rotation = 90 -- Start at expanded state
-    Arrow.ImageColor3 = Color3.fromRGB(0, 0, 0) -- Black arrow
+    Arrow.Rotation = 90
+    Arrow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    Arrow.BackgroundTransparency = 0.5
+    
+    Arrow.MouseEnter:Connect(function()
+        Arrow.BackgroundTransparency = 0.2
+    end)
+    
+    Arrow.MouseLeave:Connect(function()
+        Arrow.BackgroundTransparency = 0.5
+    end)
     
     Arrow.Activated:Connect(function()
         IsMinimized = not IsMinimized
-        local TargetY = IsMinimized and 32 or StoredY
-        local TargetRot = IsMinimized and 0 or 90
         
         if IsMinimized then
-            -- Store current size before minimizing
-            StoredY = Window.Size.Y.Offset
+            -- Minimize
             Body.Visible = false
+            Window.Size = MinimizedSize
+            Arrow.Rotation = 0
         else
+            -- Expand
             Body.Visible = true
+            Window.Size = OriginalSize
+            Arrow.Rotation = 90
         end
-        
-        -- Smooth animation for both size and rotation
-        local SizeTween = TweenService:Create(Window, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, Window.Size.X.Offset, 0, TargetY)})
-        local RotTween = TweenService:Create(Arrow, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Rotation = TargetRot})
-        
-        SizeTween:Play()
-        RotTween:Play()
-        
-        -- Ensure body visibility is correct after animation
-        SizeTween.Completed:Connect(function()
-            if IsMinimized then
-                Body.Visible = false
-            end
-        end)
     end)
 
     -- Toggle Keybind
