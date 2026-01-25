@@ -1,4 +1,4 @@
---// Depso Classic: Hub Edition
+--// Depso Classic: Script Hub Edition
 local Lib = { Windows = {} }
 
 local UIS = game:GetService("UserInputService")
@@ -19,7 +19,6 @@ local function create(class, props)
     return inst
 end
 
---// Drag & Resize Logic
 local function makeDrag(f, h)
     local d, s, st
     h.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d, st, s = true, i.Position, f.Position end end)
@@ -38,7 +37,7 @@ local function makeResize(f, h)
     UIS.InputChanged:Connect(function(i)
         if d and i.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = i.Position - st
-            f.Size = UDim2.new(0, math.max(350, s.X.Offset + delta.X), 0, math.max(200, s.Y.Offset + delta.Y))
+            f.Size = UDim2.new(0, math.max(380, s.X.Offset + delta.X), 0, math.max(250, s.Y.Offset + delta.Y))
         end
     end)
     UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d = false end end)
@@ -46,36 +45,28 @@ end
 
 function Lib:CreateWindow(title)
     local Screen = create("ScreenGui", {Parent = CoreGui, Name = "DepsoHub"})
-    local Main = create("Frame", {Parent = Screen, Size = UDim2.fromOffset(450, 300), Position = UDim2.fromOffset(100, 100), BackgroundColor3 = Theme.Main, BackgroundTransparency = 0.2, ClipsDescendants = true})
+    local Main = create("Frame", {Parent = Screen, Size = UDim2.fromOffset(450, 320), Position = UDim2.fromOffset(100, 100), BackgroundColor3 = Theme.Main, BackgroundTransparency = 0.2, ClipsDescendants = true})
     create("UIStroke", {Parent = Main, Color = Color3.new(1,1,1), Transparency = 0.8})
 
-    -- Header
     local Header = create("Frame", {Parent = Main, Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.5})
     create("TextLabel", {Parent = Header, Text = "  " .. title:upper(), Size = UDim2.new(1, -60, 1, 0), TextColor3 = Theme.Text, Font = Theme.Font, TextXAlignment = "Left", BackgroundTransparency = 1})
     
-    -- Minimize Button
     local MinBtn = create("TextButton", {Parent = Header, Text = "▼", Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -30, 0, 0), BackgroundTransparency = 1, TextColor3 = Theme.Text})
-    
-    -- Resize Handle
     local RSZ = create("TextButton", {Parent = Main, Text = "◢", Size = UDim2.fromOffset(15, 15), Position = UDim2.new(1, -15, 1, -15), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextTransparency = 0.5})
 
-    -- Sidebar (Categories)
     local Sidebar = create("ScrollingFrame", {Parent = Main, Size = UDim2.new(0, 120, 1, -30), Position = UDim2.fromOffset(0, 30), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.5, CanvasSize = UDim2.new(0,0,0,0), AutomaticCanvasSize = "Y", ScrollBarThickness = 0})
-    create("UIListLayout", {Parent = Sidebar, Padding = UDim.new(0, 2)})
+    create("UIListLayout", {Parent = Sidebar})
 
-    -- Container for Pages
     local Container = create("Frame", {Parent = Main, Size = UDim2.new(1, -130, 1, -40), Position = UDim2.fromOffset(125, 35), BackgroundTransparency = 1})
 
     makeDrag(Main, Header)
     makeResize(Main, RSZ)
 
-    -- Min Logic
-    local min = false
-    local oldS = Main.Size
+    local min, oldS = false, Main.Size
     MinBtn.MouseButton1Click:Connect(function()
         min = not min
         if min then oldS = Main.Size end
-        TS:Create(Main, TweenInfo.new(0.2), {Size = min and UDim2.fromOffset(Main.Size.X.Offset, 30) or oldS}):Play()
+        TS:Create(Main, TweenInfo.new(0.25), {Size = min and UDim2.fromOffset(Main.Size.X.Offset, 30) or oldS}):Play()
         MinBtn.Text = min and "▲" or "▼"
     end)
 
@@ -86,14 +77,16 @@ function Lib:CreateWindow(title)
         local Page = create("ScrollingFrame", {Parent = Container, Size = UDim2.new(1, 0, 1, 0), Visible = false, BackgroundTransparency = 1, CanvasSize = UDim2.new(0,0,0,0), AutomaticCanvasSize = "Y", ScrollBarThickness = 2})
         create("UIListLayout", {Parent = Page, Padding = UDim.new(0, 5)})
         
-        local TabBtn = create("TextButton", {Parent = Sidebar, Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 0.8, BackgroundColor3 = Theme.Accent, Text = name, Font = Theme.Font, TextColor3 = Theme.Text})
+        local TabBtn = create("TextButton", {Parent = Sidebar, Size = UDim2.new(1, 0, 0, 35), BackgroundTransparency = 0.9, BackgroundColor3 = Theme.Accent, Text = name, Font = Theme.Font, TextColor3 = Theme.Text})
         
         TabBtn.MouseButton1Click:Connect(function()
             for _, v in pairs(Container:GetChildren()) do v.Visible = false end
+            for _, v in pairs(Sidebar:GetChildren()) do if v:IsA("TextButton") then v.BackgroundTransparency = 0.9 end end
             Page.Visible = true
+            TabBtn.BackgroundTransparency = 0.6
         end)
 
-        if not Tabs.First then Tabs.First = Page; Page.Visible = true end
+        if not Tabs.First then Tabs.First = Page; Page.Visible = true; TabBtn.BackgroundTransparency = 0.6 end
 
         local Entry = {}
         function Entry:Button(txt, cb)
@@ -108,6 +101,24 @@ function Lib:CreateWindow(title)
                 b.BackgroundTransparency = enabled and 0.5 or 0.8
                 cb(enabled)
             end)
+        end
+        function Entry:Slider(txt, min, max, def, cb)
+            local SFrame = create("Frame", {Parent = Page, Size = UDim2.new(1, -5, 0, 35), BackgroundTransparency = 1})
+            local lab = create("TextLabel", {Parent = SFrame, Text = txt.." : "..def, Size = UDim2.new(1,0,0,15), BackgroundTransparency = 1, TextColor3 = Theme.Text, Font = Theme.Font, TextSize = 12, TextXAlignment = "Left"})
+            local bar = create("Frame", {Parent = SFrame, Size = UDim2.new(1, 0, 0, 10), Position = UDim2.new(0,0,0,20), BackgroundColor3 = Theme.Dark})
+            local fill = create("Frame", {Parent = bar, Size = UDim2.new((def-min)/(max-min), 0, 1, 0), BackgroundColor3 = Theme.Accent})
+            local sliding = false
+            local function update()
+                local m = UIS:GetMouseLocation().X
+                local p = math.clamp((m - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
+                local val = math.floor(min + (max-min) * p)
+                fill.Size = UDim2.new(p, 0, 1, 0)
+                lab.Text = txt.." : "..val
+                cb(val)
+            end
+            bar.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then sliding = true update() end end)
+            UIS.InputChanged:Connect(function(i) if sliding and i.UserInputType == Enum.UserInputType.MouseMovement then update() end end)
+            UIS.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then sliding = false end end)
         end
         return Entry
     end
