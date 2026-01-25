@@ -4,9 +4,10 @@
 
 local ImGui = {
     Windows = {},
-    Animation = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
+    -- Smooth animation settings
+    Animation = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out),
     UIAssetId = "rbxassetid://76246418997296",
-    ToggleKey = Enum.KeyCode.RightShift -- Global Hide/Show Key
+    ToggleKey = Enum.KeyCode.RightShift
 }
 
 --// Services 
@@ -27,20 +28,41 @@ local THEME = {
 local IsStudio = RunService:IsStudio()
 local GuiParent = IsStudio and PlayerGui or CoreGui
 
---// Internal Utilities
-local function ApplyTheme(Instance)
-    if Instance:IsA("GuiObject") then
-        Instance.BackgroundColor3 = THEME.Background
-        Instance.BorderColor3 = THEME.Border
-        if Instance:IsA("TextLabel") or Instance:IsA("TextButton") then
-            Instance.TextColor3 = Color3.fromRGB(255, 255, 255)
-        end
-    end
-end
+--// Smooth Dragging Logic
+local function MakeSmooth(Frame, Handle)
+    local Dragging, DragInput, DragStart, StartPos
 
---// Notification System
-function ImGui:Notify(Title, Text)
-    warn("[HUB NOTIFICATION]: " .. Title .. " - " .. Text)
+    Handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = true
+            DragStart = input.Position
+            StartPos = Frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+
+    Handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            DragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == DragInput and Dragging then
+            local Delta = input.Position - DragStart
+            Frame.Position = UDim2.new(
+                StartPos.X.Scale, 
+                StartPos.X.Offset + Delta.X, 
+                StartPos.Y.Scale, 
+                StartPos.Y.Offset + Delta.Y
+            )
+        end
+    end)
 end
 
 function ImGui:CreateWindow(Config)
@@ -65,65 +87,63 @@ function ImGui:CreateWindow(Config)
     TitleBar.BackgroundColor3 = THEME.Background
     TitleBar.Left.Title.Text = Config.Title or "Hub Menu"
     
+    -- Force Expand/Resize button to Black
     if ResizeBtn then
         ResizeBtn.BackgroundColor3 = THEME.Background
         ResizeBtn.ImageColor3 = THEME.Accent
-    end
-
-    -- Interaction: Smooth Drag & Smooth Resize
-    local function SetupInteractions()
-        local Dragging, Resizing, DragStart, ResizeStart, StartPos, StartSize
-        
-        TitleBar.InputBegan:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                Dragging, DragStart, StartPos = true, i.Position, Window.Position
-            end
-        end)
-
+        ResizeBtn.AutoButtonColor = false
+        -- Smooth Resizing
+        local Resizing, ResizeStart, StartSize
         ResizeBtn.InputBegan:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then
                 Resizing, ResizeStart, StartSize = true, i.Position, Window.AbsoluteSize
             end
         end)
-
         UserInputService.InputChanged:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseMovement then
-                if Dragging then
-                    local Delta = i.Position - DragStart
-                    Window.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-                elseif Resizing then
-                    local Delta = i.Position - ResizeStart
-                    Window.Size = UDim2.fromOffset(math.max(250, StartSize.X + Delta.X), math.max(150, StartSize.Y + Delta.Y))
-                end
+            if Resizing and i.UserInputType == Enum.UserInputType.MouseMovement then
+                local Delta = i.Position - ResizeStart
+                Window.Size = UDim2.fromOffset(
+                    math.max(250, StartSize.X + Delta.X), 
+                    math.max(150, StartSize.Y + Delta.Y)
+                )
             end
         end)
-
         UserInputService.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then Dragging, Resizing = false, false end
+            if i.UserInputType == Enum.UserInputType.MouseButton1 then Resizing = false end
         end)
     end
-    SetupInteractions()
 
-    -- Correct Arrow Rotation & Full Minimize
+    -- Apply Smooth Dragging
+    MakeSmooth(Window, TitleBar)
+
+    -- FIXED: Minimize Logic & Arrow Animation
     local Arrow = TitleBar.Left.Toggle.ToggleButton
     local IsMinimized = false
-    local StoredY = Config.Size and Config.Size.Y.Offset or 350
+    local StoredHeight = Config.Size and Config.Size.Y.Offset or 350
     
-    Arrow.Rotation = 90 -- Start at expanded state
+    Arrow.Rotation = 90 -- Start Expanded
     Arrow.Activated:Connect(function()
         IsMinimized = not IsMinimized
-        local TargetY = IsMinimized and 32 or StoredY
-        local TargetRot = IsMinimized and 0 or 90
+        
+        -- Full Minimize Height (Just the TitleBar)
+        local TargetHeight = IsMinimized and 32 or StoredHeight
+        local TargetRotation = IsMinimized and 0 or 90
         
         if not IsMinimized then Body.Visible = true end
         
-        TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, TargetY)}):Play()
-        TweenService:Create(Arrow, self.Animation, {Rotation = TargetRot}):Play()
+        -- Animate Size
+        local SizeTween = TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, TargetHeight)})
+        SizeTween:Play()
         
-        task.delay(0.2, function() if IsMinimized then Body.Visible = false end end)
+        -- Animate Arrow Rotation
+        TweenService:Create(Arrow, self.Animation, {Rotation = TargetRotation}):Play()
+        
+        SizeTween.Completed:Connect(function()
+            if IsMinimized then Body.Visible = false end
+        end)
     end)
 
-    -- Toggle Keybind
+    -- Toggle Hub Visibility Key
     UserInputService.InputBegan:Connect(function(input, gpe)
         if not gpe and input.KeyCode == self.ToggleKey then
             Screen.Enabled = not Screen.Enabled
@@ -136,23 +156,25 @@ function ImGui:CreateWindow(Config)
         local TabBtn = ToolBar.TabButton:Clone()
         TabBtn.Parent = ToolBar; TabBtn.Text = Name; TabBtn.Visible = true
         TabBtn.BackgroundColor3 = THEME.Background
+        TabBtn.BorderSizePixel = 0
 
         local Page = Body.Template:Clone()
         Page.Parent = Body; Page.Visible = false; Page.BackgroundColor3 = THEME.Background
 
-        -- Fix Category Switching Glitch
+        -- Tab Switching Fix
         TabBtn.Activated:Connect(function()
             if self.CurrentPage then self.CurrentPage.Visible = false end
             Page.Visible = true
             self.CurrentPage = Page
-            for _, b in pairs(ToolBar:GetChildren()) do if b:IsA("TextButton") then b.BackgroundTransparency = 1 end end
+            for _, b in pairs(ToolBar:GetChildren()) do 
+                if b:IsA("TextButton") then b.BackgroundTransparency = 1 end 
+            end
             TabBtn.BackgroundTransparency = 0.8
         end)
 
         if not self.CurrentPage then Page.Visible = true; self.CurrentPage = Page; TabBtn.BackgroundTransparency = 0.8 end
 
         local Elements = {}
-        
         function Elements:Button(Text, Callback)
             local Btn = UI.Prefabs.Button:Clone()
             Btn.Parent = Page; Btn.Text = Text; Btn.Visible = true
@@ -164,45 +186,15 @@ function ImGui:CreateWindow(Config)
         function Elements:Toggle(Text, Default, Callback)
             local Enabled = Default or false
             local Tog = UI.Prefabs.Button:Clone()
-            Tog.Parent = Page; Tog.Visible = true
-            Tog.BackgroundColor3 = THEME.Section
-            
+            Tog.Parent = Page; Tog.Visible = true; Tog.BackgroundColor3 = THEME.Section
             local function Update()
                 Tog.Text = Text .. ": " .. (Enabled and "[ ON ]" or "[ OFF ]")
-                Tog.TextColor3 = Enabled and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+                Tog.TextColor3 = Enabled and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 80, 80)
             end
-            
             Tog.Activated:Connect(function()
-                Enabled = not Enabled
-                Update()
-                Callback(Enabled)
+                Enabled = not Enabled; Update(); Callback(Enabled)
             end)
-            Update()
-            return Tog
-        end
-
-        function Elements:Slider(Text, Min, Max, Default, Callback)
-            local Sld = UI.Prefabs.Slider:Clone()
-            Sld.Parent = Page; Sld.Visible = true
-            Sld.Label.Text = Text; Sld.BackgroundColor3 = THEME.Section
-            
-            local function Set(val)
-                local perc = math.clamp((val - Min) / (Max - Min), 0, 1)
-                Sld.Grab.Position = UDim2.fromScale(perc, 0.5)
-                Callback(math.floor(Min + (Max - Min) * perc))
-            end
-            
-            Sld.MouseButton1Down:Connect(function()
-                local move; move = UserInputService.InputChanged:Connect(function(i)
-                    if i.UserInputType == Enum.UserInputType.MouseMovement then
-                        local perc = math.clamp((i.Position.X - Sld.AbsolutePosition.X) / Sld.AbsoluteSize.X, 0, 1)
-                        Set(Min + (Max - Min) * perc)
-                    end
-                end)
-                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then move:Disconnect() end end)
-            end)
-            Set(Default or Min)
-            return Sld
+            Update(); return Tog
         end
 
         return Elements
