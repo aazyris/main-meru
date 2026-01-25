@@ -1,4 +1,4 @@
---// Depso Pro: Animated Hub Edition (Fixed & Polished)
+--// Depso Pro: Animated Hub Edition (v4.1 Fixed)
 local Lib = { Windows = {} }
 
 local UIS = game:GetService("UserInputService")
@@ -28,7 +28,7 @@ end
 function Lib:CreateWindow(title)
     local Screen = create("ScreenGui", {Parent = CoreGui, Name = "DepsoHub", ResetOnSpawn = false})
     
-    -- Fixed: Removed ClampingScrollSteps from regular Frame
+    -- FIXED: Removed ClampingScrollSteps from this Frame
     local Main = create("Frame", {
         Parent = Screen, 
         Size = UDim2.fromOffset(520, 360), 
@@ -49,6 +49,7 @@ function Lib:CreateWindow(title)
 
     local Container = create("Frame", {Parent = Main, Size = UDim2.new(1, -180, 1, -60), Position = UDim2.fromOffset(170, 50), BackgroundTransparency = 1})
 
+    -- Dragging Logic
     local d, s, st
     Header.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then d, st, s = true, i.Position, Main.Position end end)
     UIS.InputChanged:Connect(function(i) if d and i.UserInputType == Enum.UserInputType.MouseMovement then
@@ -75,6 +76,7 @@ function Lib:CreateWindow(title)
         
         if not API.FirstPage then API.FirstPage = Page; Page.Visible = true; tween(TabBtn, 0, {BackgroundTransparency = 0.2, TextColor3 = Theme.Text}) end
 
+        -- Helper to add Toggles to any parent
         local function AddToggle(parent, txt, cb)
             local enabled = false
             local b = create("TextButton", {Parent = parent, Size = UDim2.new(1, -5, 0, 35), BackgroundColor3 = Theme.Dark, BackgroundTransparency = 0.3, Text = "  "..txt, Font = Theme.Font, TextSize = 13, TextColor3 = Theme.Text, TextXAlignment = "Left"})
