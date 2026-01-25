@@ -70,133 +70,68 @@ function ImGui:CreateWindow(Config)
         ResizeBtn.ImageColor3 = THEME.Accent
     end
 
-    -- Working Drag & Resize System
+    -- Interaction: Smooth Drag & Smooth Resize
     local function SetupInteractions()
         local Dragging, Resizing, DragStart, ResizeStart, StartPos, StartSize
         
-        -- Debug: Print UI structure
-        print("Window children:", Window:GetChildren())
-        print("Content children:", Content:GetChildren())
-        print("TitleBar:", TitleBar)
-        print("TitleBar children:", TitleBar:GetChildren())
-        
-        -- Try different drag targets
-        local DragTarget = TitleBar:FindFirstChild("Left") or TitleBar
-        
-        DragTarget.MouseEnter:Connect(function()
-            DragTarget.BackgroundTransparency = 0.9
-            print("Mouse entered drag target")
-        end)
-        
-        DragTarget.MouseLeave:Connect(function()
-            if not Dragging then
-                DragTarget.BackgroundTransparency = 1
-            end
-        end)
-        
-        DragTarget.InputBegan:Connect(function(i)
-            print("Input began on drag target:", i.UserInputType)
+        TitleBar.InputBegan:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                Dragging = true
-                DragStart = i.Position
-                StartPos = Window.Position
-                print("Started dragging")
+                Dragging, DragStart, StartPos = true, i.Position, Window.Position
             end
         end)
 
-        if ResizeBtn then
-            ResizeBtn.InputBegan:Connect(function(i)
-                if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                    Resizing = true
-                    ResizeStart = i.Position
-                    StartSize = Window.AbsoluteSize
-                    print("Started resizing")
-                end
-            end)
-        end
+        ResizeBtn.InputBegan:Connect(function(i)
+            if i.UserInputType == Enum.UserInputType.MouseButton1 then
+                Resizing, ResizeStart, StartSize = true, i.Position, Window.AbsoluteSize
+            end
+        end)
 
         UserInputService.InputChanged:Connect(function(i)
             if i.UserInputType == Enum.UserInputType.MouseMovement then
                 if Dragging then
                     local Delta = i.Position - DragStart
-                    Window.Position = UDim2.new(
-                        StartPos.X.Scale, 
-                        StartPos.X.Offset + Delta.X, 
-                        StartPos.Y.Scale, 
-                        StartPos.Y.Offset + Delta.Y
-                    )
-                elseif Resizing and ResizeBtn then
+                    Window.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+                elseif Resizing then
                     local Delta = i.Position - ResizeStart
-                    Window.Size = UDim2.fromOffset(
-                        math.max(250, StartSize.X + Delta.X), 
-                        math.max(150, StartSize.Y + Delta.Y)
-                    )
+                    Window.Size = UDim2.fromOffset(math.max(250, StartSize.X + Delta.X), math.max(150, StartSize.Y + Delta.Y))
                 end
             end
         end)
 
         UserInputService.InputEnded:Connect(function(i)
-            if i.UserInputType == Enum.UserInputType.MouseButton1 then
-                Dragging = false
-                Resizing = false
-                DragTarget.BackgroundTransparency = 1
-                print("Ended drag/resize")
-            end
+            if i.UserInputType == Enum.UserInputType.MouseButton1 then Dragging, Resizing = false, false end
         end)
     end
     SetupInteractions()
 
-    -- Working Minimize/Expand System
-    local Arrow = nil
-    -- Find the arrow button in different possible locations
-    Arrow = TitleBar:FindFirstChild("Left", true):FindFirstChild("Toggle", true):FindFirstChild("ToggleButton")
-    if not Arrow then
-        Arrow = TitleBar:FindFirstChild("ToggleButton", true)
-    end
-    if not Arrow then
-        Arrow = Window:FindFirstChild("ToggleButton", true)
-    end
+    -- Fixed Arrow Rotation & Full Minimize
+    local Arrow = TitleBar.Left.Toggle.ToggleButton
+    local IsMinimized = false
+    local StoredY = Config.Size and Config.Size.Y.Offset or 350
     
-    print("Found arrow:", Arrow)
-    
-    if Arrow then
-        local IsMinimized = false
-        local OriginalSize = Config.Size or UDim2.fromOffset(450, 350)
-        local MinimizedSize = UDim2.fromOffset(OriginalSize.X.Offset, 32)
+    Arrow.Rotation = 90 -- Start at expanded state
+    Arrow.Activated:Connect(function()
+        IsMinimized = not IsMinimized
+        local TargetY = IsMinimized and 32 or StoredY
+        local TargetRot = IsMinimized and 0 or 90
         
-        Arrow.Rotation = 90
-        Arrow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-        Arrow.BackgroundTransparency = 0.5
+        -- Hide body immediately when minimizing
+        if IsMinimized then Body.Visible = false end
         
-        Arrow.MouseEnter:Connect(function()
-            Arrow.BackgroundTransparency = 0.2
-        end)
+        -- Create size tween
+        local SizeTween = TweenService:Create(Window, self.Animation, {Size = UDim2.new(0, Window.Size.X.Offset, 0, TargetY)})
+        local RotTween = TweenService:Create(Arrow, self.Animation, {Rotation = TargetRot})
         
-        Arrow.MouseLeave:Connect(function()
-            Arrow.BackgroundTransparency = 0.5
-        end)
+        SizeTween:Play()
+        RotTween:Play()
         
-        Arrow.Activated:Connect(function()
-            print("Arrow clicked")
-            IsMinimized = not IsMinimized
-            
-            if IsMinimized then
-                -- Minimize
-                Body.Visible = false
-                Window.Size = MinimizedSize
-                Arrow.Rotation = 0
-                print("Minimized")
-            else
-                -- Expand
+        -- Show body after tween completes if expanding
+        if not IsMinimized then
+            SizeTween.Completed:Connect(function()
                 Body.Visible = true
-                Window.Size = OriginalSize
-                Arrow.Rotation = 90
-                print("Expanded")
-            end
-        end)
-    else
-        warn("Could not find arrow button!")
-    end
+            end)
+        end
+    end)
 
     -- Toggle Keybind
     UserInputService.InputBegan:Connect(function(input, gpe)
@@ -211,6 +146,7 @@ function ImGui:CreateWindow(Config)
         local TabBtn = ToolBar.TabButton:Clone()
         TabBtn.Parent = ToolBar; TabBtn.Text = Name; TabBtn.Visible = true
         TabBtn.BackgroundColor3 = THEME.Background
+        TabBtn.BackgroundTransparency = 1 -- Start black (transparent background)
 
         local Page = Body.Template:Clone()
         Page.Parent = Body; Page.Visible = false; Page.BackgroundColor3 = THEME.Background
@@ -221,10 +157,14 @@ function ImGui:CreateWindow(Config)
             Page.Visible = true
             self.CurrentPage = Page
             for _, b in pairs(ToolBar:GetChildren()) do if b:IsA("TextButton") then b.BackgroundTransparency = 1 end end
-            TabBtn.BackgroundTransparency = 0.8
+            TabBtn.BackgroundTransparency = 0.8 -- Highlight selected tab
         end)
 
-        if not self.CurrentPage then Page.Visible = true; self.CurrentPage = Page; TabBtn.BackgroundTransparency = 0.8 end
+        if not self.CurrentPage then 
+            Page.Visible = true
+            self.CurrentPage = Page
+            TabBtn.BackgroundTransparency = 0.8 -- Highlight first tab
+        end
 
         local Elements = {}
         
