@@ -30,36 +30,6 @@ local THEME = {
 local Animation = TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
 --// Utility: Create styled elements
-local function CreateButton(Parent, Text, Callback)
-    local Btn = Instance.new("TextButton")
-    Btn.Parent = Parent
-    Btn.Name = "Button"
-    Btn.Text = Text
-    Btn.BackgroundColor3 = THEME.Section
-    Btn.BorderColor3 = THEME.Border
-    Btn.TextColor3 = THEME.Text
-    Btn.TextSize = 14
-    Btn.Font = Enum.Font.GothamBold
-    Btn.Size = UDim2.new(1, -10, 0, 35)
-    Btn.Position = UDim2.new(0, 5, 0, 0)
-    Btn.Activated:Connect(Callback)
-    return Btn
-end
-
-local function CreateLabel(Parent, Text)
-    local Lbl = Instance.new("TextLabel")
-    Lbl.Parent = Parent
-    Lbl.Name = "Label"
-    Lbl.Text = Text
-    Lbl.BackgroundColor3 = THEME.Background
-    Lbl.BorderColor3 = THEME.Border
-    Lbl.TextColor3 = THEME.Text
-    Lbl.TextSize = 13
-    Lbl.Font = Enum.Font.Gotham
-    Lbl.Size = UDim2.new(1, 0, 1, 0)
-    return Lbl
-end
-
 local function CreateFrame(Parent, Name)
     local Frm = Instance.new("Frame")
     Frm.Parent = Parent
@@ -93,11 +63,17 @@ function ImGui:CreateWindow(Config)
     TitleBar.Active = true
     TitleBar.Selectable = true
     
-    local TitleLabel = CreateLabel(TitleBar, Title)
-    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Parent = TitleBar
+    TitleLabel.Name = "Title"
+    TitleLabel.Text = Title
     TitleLabel.BackgroundTransparency = 1
-    TitleLabel.TextSize = 16
+    TitleLabel.BorderSizePixel = 0
     TitleLabel.TextColor3 = THEME.Text
+    TitleLabel.TextSize = 16
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.Padding = UDim.new(0, 10)
     
     -- Minimize Button
