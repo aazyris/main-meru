@@ -179,29 +179,78 @@ function Library:CreateWindow()
 	ContentContainer.Parent                 = MainFrame
 
 	-- ── Drag ────────────────────────────────────────────────
-	local Dragging, DragStart, StartPos
+	local RunService = game:GetService("RunService")
+
+	local Dragging   = false
+	local DragStart  = nil
+	local StartPos   = nil
+	local TargetPos  = Vector2.new(0, 0)
+	local CurrentPos = Vector2.new(0, 0)
+	local DragConnection = nil
+
+	local LERP_SPEED = 0.18
+	local DRAG_GROW  = 12
+
+	local function GetRestSize()
+		return Minimized and MinimizedSize or WindowSize
+	end
+
+	local function StartLerpLoop()
+		DragConnection = RunService.Heartbeat:Connect(function(dt)
+			CurrentPos = CurrentPos:Lerp(TargetPos, math.min(LERP_SPEED / dt, 1))
+			MainFrame.Position = UDim2.new(
+				StartPos.X.Scale,  CurrentPos.X,
+				StartPos.Y.Scale,  CurrentPos.Y
+			)
+		end)
+	end
+
+	local function StopLerpLoop()
+		if DragConnection then
+			DragConnection:Disconnect()
+			DragConnection = nil
+		end
+	end
 
 	TitleBar.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			Dragging  = true
 			DragStart = input.Position
 			StartPos  = MainFrame.Position
+
+			CurrentPos = Vector2.new(StartPos.X.Offset, StartPos.Y.Offset)
+			TargetPos  = CurrentPos
+
+			local rest = GetRestSize()
+			Tween(MainFrame, {
+				Size = UDim2.new(0, rest.X.Offset + DRAG_GROW * 2, 0, rest.Y.Offset + DRAG_GROW * 2)
+			}, 0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+			StartLerpLoop()
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
 		if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
 			local Delta = input.Position - DragStart
-			MainFrame.Position = UDim2.new(
-				StartPos.X.Scale,  StartPos.X.Offset + Delta.X,
-				StartPos.Y.Scale,  StartPos.Y.Offset + Delta.Y
+			TargetPos = Vector2.new(
+				StartPos.X.Offset + Delta.X,
+				StartPos.Y.Offset + Delta.Y
 			)
 		end
 	end)
 
 	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and Dragging then
 			Dragging = false
+			StopLerpLoop()
+
+			MainFrame.Position = UDim2.new(
+				StartPos.X.Scale,  CurrentPos.X,
+				StartPos.Y.Scale,  CurrentPos.Y
+			)
+
+			Tween(MainFrame, { Size = GetRestSize() }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 		end
 	end)
 
