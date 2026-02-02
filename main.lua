@@ -3,7 +3,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 
-function Library:CreateWindow() -- Hub name is now locked inside
+function Library:CreateWindow()
     local Name = "Meru"
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Parent = CoreGui
@@ -19,13 +19,17 @@ function Library:CreateWindow() -- Hub name is now locked inside
     local TitleBar = Instance.new("Frame")
     local TitleLabel = Instance.new("TextLabel")
     local CloseButton = Instance.new("TextButton")
+    local MinButton = Instance.new("TextButton")
 
-    -- Bigger Window Size: 500x350
+    -- Size Settings
+    local WindowSize = UDim2.new(0, 500, 0, 350)
+    local MinimizedSize = UDim2.new(0, 500, 0, 35)
+
     MainFrame.Parent = ScreenGui
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     MainFrame.BackgroundTransparency = 0.15
     MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
-    MainFrame.Size = UDim2.new(0, 500, 0, 350)
+    MainFrame.Size = WindowSize
     MainFrame.ClipsDescendants = true
     MainCorner.Parent = MainFrame
 
@@ -33,7 +37,7 @@ function Library:CreateWindow() -- Hub name is now locked inside
     TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     TitleBar.Parent = MainFrame
 
-    TitleLabel.Size = UDim2.new(1, -40, 1, 0)
+    TitleLabel.Size = UDim2.new(1, -80, 1, 0)
     TitleLabel.Position = UDim2.new(0, 12, 0, 0)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Text = Name
@@ -42,6 +46,22 @@ function Library:CreateWindow() -- Hub name is now locked inside
     TitleLabel.TextSize = 16
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.Parent = TitleBar
+
+    -- Minimize Logic
+    local Minimized = false
+    MinButton.Size = UDim2.new(0, 35, 0, 35)
+    MinButton.Position = UDim2.new(1, -70, 0, 0)
+    MinButton.BackgroundTransparency = 1
+    MinButton.Text = "-"
+    MinButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+    MinButton.TextSize = 25
+    MinButton.Parent = TitleBar
+
+    MinButton.MouseButton1Click:Connect(function()
+        Minimized = not Minimized
+        local TargetSize = Minimized and MinimizedSize or WindowSize
+        TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = TargetSize}):Play()
+    end)
 
     CloseButton.Size = UDim2.new(0, 35, 0, 35)
     CloseButton.Position = UDim2.new(1, -35, 0, 0)
@@ -62,35 +82,39 @@ function Library:CreateWindow() -- Hub name is now locked inside
     TabContainer.Position = UDim2.new(0, 0, 0, 5)
     TabContainer.BackgroundTransparency = 1
     TabContainer.ScrollBarThickness = 0
-    Instance.new("UIListLayout", TabContainer).Padding = UDim.new(0, 5)
-    TabContainer.UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    local TabList = Instance.new("UIListLayout", TabContainer)
+    TabList.Padding = UDim.new(0, 5)
+    TabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     ContentContainer.Parent = MainFrame
     ContentContainer.Position = UDim2.new(0, 140, 0, 45)
     ContentContainer.Size = UDim2.new(1, -150, 1, -55)
     ContentContainer.BackgroundTransparency = 1
 
-    -- Toggle visibility with LeftControl
-    UserInputService.InputBegan:Connect(function(io, p)
-        if not p and io.KeyCode == Enum.KeyCode.LeftControl then
-            ScreenGui.Enabled = not ScreenGui.Enabled
+    -- Click to Drag + Animation
+    local Dragging, DragInput, DragStart, StartPos
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = true
+            DragStart = input.Position
+            StartPos = MainFrame.Position
+            -- Pop Animation (Grow)
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = UDim2.new(0, WindowSize.X.Offset + 10, 0, WindowSize.Y.Offset + 10)}):Play()
         end
     end)
 
-    -- Dragging
-    TitleBar.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local StartPos = MainFrame.Position
-            local MouseStart = Input.Position
-            local MoveCon = UserInputService.InputChanged:Connect(function(MoveInput)
-                if MoveInput.UserInputType == Enum.UserInputType.MouseMovement then
-                    local Delta = MoveInput.Position - MouseStart
-                    MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-                end
-            end)
-            UserInputService.InputEnded:Connect(function(EndInput)
-                if EndInput.UserInputType == Enum.UserInputType.MouseButton1 then MoveCon:Disconnect() end
-            end)
+    UserInputService.InputChanged:Connect(function(input)
+        if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local Delta = input.Position - DragStart
+            MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and Dragging then
+            Dragging = false
+            -- Shrink back to normal
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = Minimized and MinimizedSize or WindowSize}):Play()
         end
     end)
 
@@ -179,9 +203,9 @@ function Library:CreateWindow() -- Hub name is now locked inside
 
             Circle.Size = UDim2.new(0, 14, 0, 14)
             Circle.AnchorPoint = Vector2.new(0.5, 0.5)
-            Circle.Position = UDim2.new(0, 0, 0.5, 0)
+            Circle.Position = UDim2.new(1, 0, 0.5, 0) -- Fixed to fill end
             Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            Circle.Parent = Fill -- Parented to Fill so it stays at the end
+            Circle.Parent = Fill
             Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
 
             local function Update()
@@ -191,30 +215,27 @@ function Library:CreateWindow() -- Hub name is now locked inside
                 local Percentage = math.clamp((MousePos - BarPos) / BarSize, 0, 1)
                 
                 Fill.Size = UDim2.new(Percentage, 0, 1, 0)
-                Circle.Position = UDim2.new(1, 0, 0.5, 0) -- Stays locked to the Fill edge
-                
                 local Value = math.floor(Min + (Max - Min) * Percentage)
                 Title.Text = Text .. ": " .. tostring(Value)
                 Callback(Value)
             end
 
-            local Dragging = false
+            local sDragging = false
             SliderFrame.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    Dragging = true
-                    Update()
+                    sDragging = true
                 end
             end)
 
             UserInputService.InputChanged:Connect(function(input)
-                if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                if sDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
                     Update()
                 end
             end)
 
             UserInputService.InputEnded:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                    Dragging = false
+                    sDragging = false
                 end
             end)
         end
