@@ -30,6 +30,41 @@ function Library:CreateWindow()
 	local prev = CoreGui:FindFirstChild(Name .. "_Hub")
 	if prev then prev:Destroy() end
 
+	-- ── Hover system (CoreGui-safe) ─────────────────────────
+	-- CoreGui doesn't fire MouseEntered/MouseLeaving.
+	-- Instead we poll mouse position on every InputChanged and
+	-- check which registered GuiObject the mouse is over.
+	local HoverTargets = {}   -- { instance, onEnter, onLeave, inside }
+
+	local function RegisterHover(guiObj, onEnter, onLeave)
+		table.insert(HoverTargets, { instance = guiObj, onEnter = onEnter, onLeave = onLeave, inside = false })
+	end
+
+	local function IsMouseOver(guiObj)
+		local pos = UserInputService:GetMouseLocation()
+		local abs = guiObj.AbsolutePosition
+		local sz  = guiObj.AbsoluteSize
+		return pos.X >= abs.X and pos.X <= abs.X + sz.X
+			and pos.Y >= abs.Y and pos.Y <= abs.Y + sz.Y
+	end
+
+	-- Single shared connection — fires for every mouse move
+	UserInputService.InputChanged:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+		for _, h in ipairs(HoverTargets) do
+			if h.instance and h.instance.Parent then
+				local over = IsMouseOver(h.instance)
+				if over and not h.inside then
+					h.inside = true
+					h.onEnter()
+				elseif not over and h.inside then
+					h.inside = false
+					h.onLeave()
+				end
+			end
+		end
+	end)
+
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name         = Name .. "_Hub"
 	ScreenGui.ResetOnSpawn = false
@@ -78,12 +113,12 @@ function Library:CreateWindow()
 	MinButton.Font                   = Enum.Font.Gotham
 	MinButton.Parent                 = TitleBar
 
-	MinButton.MouseEntered:Connect(function()
-		Tween(MinButton, { TextColor3 = Colors.TextActive }, 0.1)
-	end)
-	MinButton.MouseLeaving:Connect(function()
-		Tween(MinButton, { TextColor3 = Colors.TextDim }, 0.1)
-	end)
+	-- Hover via poller
+	RegisterHover(MinButton,
+		function() MinButton.TextColor3 = Colors.TextActive end,
+		function() MinButton.TextColor3 = Colors.TextDim end
+	)
+
 	MinButton.MouseButton1Click:Connect(function()
 		Minimized = not Minimized
 		Tween(MainFrame, { Size = Minimized and MinimizedSize or WindowSize }, 0.3, Enum.EasingStyle.Quart)
@@ -100,12 +135,12 @@ function Library:CreateWindow()
 	CloseButton.Font                   = Enum.Font.Gotham
 	CloseButton.Parent                 = TitleBar
 
-	CloseButton.MouseEntered:Connect(function()
-		Tween(CloseButton, { TextColor3 = Color3.fromRGB(255, 100, 100) }, 0.1)
-	end)
-	CloseButton.MouseLeaving:Connect(function()
-		Tween(CloseButton, { TextColor3 = Colors.TextDim }, 0.1)
-	end)
+	-- Hover via poller
+	RegisterHover(CloseButton,
+		function() CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100) end,
+		function() CloseButton.TextColor3 = Colors.TextDim end
+	)
+
 	CloseButton.MouseButton1Click:Connect(function()
 		Tween(MainFrame, { Size = UDim2.new(0, 0, 0, 0) }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 		task.delay(0.25, function()
@@ -234,17 +269,11 @@ function Library:CreateWindow()
 		table.insert(AllTabs, { button = TabButton, accent = AccentBar, page = Page })
 		local myIndex = #AllTabs
 
-		-- Hover
-		TabButton.MouseEntered:Connect(function()
-			if ActiveIndex ~= myIndex then
-				Tween(TabButton, { BackgroundColor3 = Colors.ElementHover }, 0.1)
-			end
-		end)
-		TabButton.MouseLeaving:Connect(function()
-			if ActiveIndex ~= myIndex then
-				Tween(TabButton, { BackgroundColor3 = Colors.Element }, 0.1)
-			end
-		end)
+		-- Hover via poller (only visually change when not the active tab)
+		RegisterHover(TabButton,
+			function() if ActiveIndex ~= myIndex then TabButton.BackgroundColor3 = Colors.ElementHover end end,
+			function() if ActiveIndex ~= myIndex then TabButton.BackgroundColor3 = Colors.Element end end
+		)
 
 		-- Click
 		TabButton.MouseButton1Click:Connect(function()
@@ -273,17 +302,18 @@ function Library:CreateWindow()
 			Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
 			Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 14)
 
-			Button.MouseEntered:Connect(function()
-				Tween(Button, { BackgroundColor3 = Colors.ElementHover }, 0.1)
-			end)
-			Button.MouseLeaving:Connect(function()
-				Tween(Button, { BackgroundColor3 = Colors.Element }, 0.1)
-			end)
+			-- Hover via poller
+			RegisterHover(Button,
+				function() Button.BackgroundColor3 = Colors.ElementHover end,
+				function() Button.BackgroundColor3 = Colors.Element end
+			)
+
+			-- Press flash
 			Button.MouseButton1Down:Connect(function()
-				Tween(Button, { BackgroundColor3 = Colors.ElementActive }, 0.06)
+				Button.BackgroundColor3 = Colors.ElementActive
 			end)
 			Button.MouseButton1Click:Connect(function()
-				Tween(Button, { BackgroundColor3 = Colors.ElementHover }, 0.1)
+				Button.BackgroundColor3 = Colors.ElementHover
 				if Callback then Callback() end
 			end)
 		end
