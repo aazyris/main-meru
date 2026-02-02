@@ -7,20 +7,19 @@ function Library:CreateWindow(Name)
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Parent = CoreGui
     ScreenGui.Name = Name .. "_Hub"
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.ResetOnSpawn = false
 
     local MainFrame = Instance.new("Frame")
     local MainCorner = Instance.new("UICorner")
-    local LeftPanel = Instance.new("Frame") -- Category Side
+    local LeftPanel = Instance.new("Frame")
     local TabContainer = Instance.new("ScrollingFrame")
-    local ContentContainer = Instance.new("Frame") -- Elements Side
+    local ContentContainer = Instance.new("Frame")
     
     local TitleBar = Instance.new("Frame")
     local TitleLabel = Instance.new("TextLabel")
     local CloseButton = Instance.new("TextButton")
 
-    -- Larger Hub Size (450x300)
-    MainFrame.Name = "MainFrame"
+    -- Setup Main Window
     MainFrame.Parent = ScreenGui
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     MainFrame.BackgroundTransparency = 0.15
@@ -29,7 +28,7 @@ function Library:CreateWindow(Name)
     MainFrame.ClipsDescendants = true
     MainCorner.Parent = MainFrame
 
-    -- Title Bar
+    -- Title Bar logic
     TitleBar.Size = UDim2.new(1, 0, 0, 35)
     TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     TitleBar.Parent = MainFrame
@@ -53,8 +52,7 @@ function Library:CreateWindow(Name)
     CloseButton.Parent = TitleBar
     CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-    -- Sidebar (Categories)
-    LeftPanel.Name = "LeftPanel"
+    -- Sidebar for Categories
     LeftPanel.Parent = MainFrame
     LeftPanel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     LeftPanel.Position = UDim2.new(0, 0, 0, 35)
@@ -69,19 +67,24 @@ function Library:CreateWindow(Name)
     TabList.Padding = UDim.new(0, 5)
     TabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    -- Content Area
-    ContentContainer.Name = "ContentContainer"
+    -- Content Area (Where buttons go)
     ContentContainer.Parent = MainFrame
     ContentContainer.Position = UDim2.new(0, 125, 0, 40)
     ContentContainer.Size = UDim2.new(1, -130, 1, -45)
     ContentContainer.BackgroundTransparency = 1
+
+    -- Hide/Show with LeftControl
+    UserInputService.InputBegan:Connect(function(io, p)
+        if not p and io.KeyCode == Enum.KeyCode.LeftControl then
+            ScreenGui.Enabled = not ScreenGui.Enabled
+        end
+    end)
 
     -- Dragging Logic
     TitleBar.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             local StartPos = MainFrame.Position
             local MouseStart = Input.Position
-            TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = UDim2.new(0, 460, 0, 310)}):Play()
             local MoveCon = UserInputService.InputChanged:Connect(function(MoveInput)
                 if MoveInput.UserInputType == Enum.UserInputType.MouseMovement then
                     local Delta = MoveInput.Position - MouseStart
@@ -89,10 +92,7 @@ function Library:CreateWindow(Name)
                 end
             end)
             UserInputService.InputEnded:Connect(function(EndInput)
-                if EndInput.UserInputType == Enum.UserInputType.MouseButton1 then
-                    MoveCon:Disconnect()
-                    TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = UDim2.new(0, 450, 0, 300)}):Play()
-                end
+                if EndInput.UserInputType == Enum.UserInputType.MouseButton1 then MoveCon:Disconnect() end
             end)
         end
     end)
@@ -105,7 +105,7 @@ function Library:CreateWindow(Name)
         local Page = Instance.new("ScrollingFrame")
         local PageList = Instance.new("UIListLayout")
 
-        TabButton.Size = UDim2.new(0, 100, 0, 30)
+        TabButton.Size = UDim2.new(0, 110, 0, 30)
         TabButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         TabButton.Text = TabName
         TabButton.TextColor3 = Color3.fromRGB(150, 150, 150)
@@ -120,35 +120,31 @@ function Library:CreateWindow(Name)
         Page.BackgroundTransparency = 1
         Page.Visible = false
         Page.ScrollBarThickness = 2
+        Page.CanvasSize = UDim2.new(0,0,0,0)
         Page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        
         PageList.Parent = Page
         PageList.Padding = UDim.new(0, 6)
+        PageList.SortOrder = Enum.SortOrder.LayoutOrder
 
         if FirstTab then
             Page.Visible = true
             TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
             FirstTab = false
         end
 
         TabButton.MouseButton1Click:Connect(function()
-            for _, v in pairs(ContentContainer:GetChildren()) do v.Visible = false end
-            for _, v in pairs(TabContainer:GetChildren()) do 
-                if v:IsA("TextButton") then 
-                    v.TextColor3 = Color3.fromRGB(150, 150, 150)
-                    v.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                end 
-            end
+            for _, v in pairs(ContentContainer:GetChildren()) do if v:IsA("ScrollingFrame") then v.Visible = false end end
+            for _, v in pairs(TabContainer:GetChildren()) do if v:IsA("TextButton") then v.TextColor3 = Color3.fromRGB(150, 150, 150) end end
             Page.Visible = true
             TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
         end)
 
         local Elements = {}
 
         function Elements:CreateButton(Text, Callback)
             local Button = Instance.new("TextButton")
-            Button.Size = UDim2.new(1, 0, 0, 32)
+            Button.Size = UDim2.new(1, -5, 0, 35) -- Adjusted width
             Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             Button.Text = "  " .. Text
             Button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -156,7 +152,7 @@ function Library:CreateWindow(Name)
             Button.TextSize = 13
             Button.TextXAlignment = Enum.TextXAlignment.Left
             Button.Parent = Page
-            Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
+            Instance.new("UICorner", Button)
             Button.MouseButton1Click:Connect(Callback)
         end
 
@@ -164,7 +160,7 @@ function Library:CreateWindow(Name)
             local Toggled = false
             local Button = Instance.new("TextButton")
             local Indicator = Instance.new("Frame")
-            Button.Size = UDim2.new(1, 0, 0, 32)
+            Button.Size = UDim2.new(1, -5, 0, 35)
             Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             Button.Text = "  " .. Text
             Button.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -172,12 +168,14 @@ function Library:CreateWindow(Name)
             Button.TextSize = 13
             Button.TextXAlignment = Enum.TextXAlignment.Left
             Button.Parent = Page
-            Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
-            Indicator.Size = UDim2.new(0, 20, 0, 20)
-            Indicator.Position = UDim2.new(1, -26, 0.5, -10)
+            Instance.new("UICorner", Button)
+            
+            Indicator.Size = UDim2.new(0, 18, 0, 18)
+            Indicator.Position = UDim2.new(1, -24, 0.5, -9)
             Indicator.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
             Indicator.Parent = Button
             Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+            
             Button.MouseButton1Click:Connect(function()
                 Toggled = not Toggled
                 TweenService:Create(Indicator, TweenInfo.new(0.2), {BackgroundColor3 = Toggled and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(50, 50, 50)}):Play()
@@ -190,9 +188,9 @@ function Library:CreateWindow(Name)
             local Title = Instance.new("TextLabel")
             local Bar = Instance.new("Frame")
             local Fill = Instance.new("Frame")
-            local Circle = Instance.new("Frame") -- The Handle
+            local Circle = Instance.new("Frame")
             
-            SliderFrame.Size = UDim2.new(1, 0, 0, 45)
+            SliderFrame.Size = UDim2.new(1, -5, 0, 45)
             SliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             SliderFrame.Parent = Page
             Instance.new("UICorner", SliderFrame)
@@ -237,8 +235,8 @@ function Library:CreateWindow(Name)
                     local Move = UserInputService.InputChanged:Connect(function(Input)
                         if Input.UserInputType == Enum.UserInputType.MouseMovement then Update(Input) end
                     end)
-                    UserInputService.InputEnded:Connect(function(Input)
-                        if Input.UserInputType == Enum.UserInputType.MouseButton1 then Move:Disconnect() end
+                    local End; End = UserInputService.InputEnded:Connect(function(Input)
+                        if Input.UserInputType == Enum.UserInputType.MouseButton1 then Move:Disconnect(); End:Disconnect() end
                     end)
                 end
             end)
