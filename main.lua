@@ -6,33 +6,35 @@ local CoreGui = game:GetService("CoreGui")
 function Library:CreateWindow(Name)
     local ScreenGui = Instance.new("ScreenGui")
     ScreenGui.Parent = CoreGui
-    ScreenGui.Name = Name .. "_Lib"
+    ScreenGui.Name = Name .. "_Hub"
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local MainFrame = Instance.new("Frame")
     local MainCorner = Instance.new("UICorner")
     local TitleBar = Instance.new("Frame")
     local TitleLabel = Instance.new("TextLabel")
     local CloseButton = Instance.new("TextButton")
-    local ResizeGrip = Instance.new("ImageLabel") -- Better Resize Icon
     local Container = Instance.new("ScrollingFrame")
     local UIList = Instance.new("UIListLayout")
 
+    -- Fixed Hub Size (Perfect for all games)
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    MainFrame.Size = UDim2.new(0, 300, 0, 220)
+    MainFrame.BackgroundTransparency = 0.15 -- Opacity back
+    MainFrame.Position = UDim2.new(0.5, -150, 0.5, -125)
+    MainFrame.Size = UDim2.new(0, 320, 0, 250)
     MainFrame.ClipsDescendants = true
 
     MainCorner.CornerRadius = UDim.new(0, 8)
     MainCorner.Parent = MainFrame
 
-    TitleBar.Size = UDim2.new(1, 0, 0, 30)
+    TitleBar.Size = UDim2.new(1, 0, 0, 35)
     TitleBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     TitleBar.Parent = MainFrame
 
     TitleLabel.Size = UDim2.new(1, -40, 1, 0)
-    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.Position = UDim2.new(0, 12, 0, 0)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Text = Name
     TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -41,47 +43,34 @@ function Library:CreateWindow(Name)
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
     TitleLabel.Parent = TitleBar
 
-    CloseButton.Size = UDim2.new(0, 30, 0, 30)
-    CloseButton.Position = UDim2.new(1, -30, 0, 0)
+    CloseButton.Size = UDim2.new(0, 35, 0, 35)
+    CloseButton.Position = UDim2.new(1, -35, 0, 0)
     CloseButton.BackgroundTransparency = 1
     CloseButton.Text = "×"
     CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseButton.TextSize = 20
+    CloseButton.TextSize = 22
     CloseButton.Parent = TitleBar
     CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-    -- Fixed Resize Icon
-    ResizeGrip.Name = "ResizeGrip"
-    ResizeGrip.Parent = MainFrame
-    ResizeGrip.AnchorPoint = Vector2.new(1, 1)
-    ResizeGrip.Position = UDim2.new(1, -2, 1, -2)
-    ResizeGrip.Size = UDim2.new(0, 15, 0, 15)
-    ResizeGrip.BackgroundTransparency = 1
-    ResizeGrip.Image = "rbxassetid://3926307971"
-    ResizeGrip.ImageColor3 = Color3.fromRGB(255, 255, 255)
-    ResizeGrip.ZIndex = 10
-
     Container.Parent = MainFrame
-    Container.Position = UDim2.new(0, 10, 0, 40)
-    Container.Size = UDim2.new(1, -20, 1, -50)
+    Container.Position = UDim2.new(0, 10, 0, 45)
+    Container.Size = UDim2.new(1, -20, 1, -55)
     Container.BackgroundTransparency = 1
-    Container.ScrollBarThickness = 2
+    Container.ScrollBarThickness = 3
     Container.CanvasSize = UDim2.new(0, 0, 0, 0)
     Container.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
     UIList.Parent = Container
-    UIList.Padding = UDim.new(0, 6)
+    UIList.Padding = UDim.new(0, 7)
     UIList.SortOrder = Enum.SortOrder.LayoutOrder
 
-    -- Dragging Logic
-    local CurrentRestingSize = MainFrame.Size
+    -- Dragging Logic with Pop Animation
     TitleBar.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             local StartPos = MainFrame.Position
             local MouseStart = Input.Position
             
-            -- Pop Animation
-            TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = UDim2.new(0, CurrentRestingSize.X.Offset + 10, 0, CurrentRestingSize.Y.Offset + 10)}):Play()
+            TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = UDim2.new(0, 330, 0, 260)}):Play()
 
             local MoveCon = UserInputService.InputChanged:Connect(function(MoveInput)
                 if MoveInput.UserInputType == Enum.UserInputType.MouseMovement then
@@ -90,37 +79,10 @@ function Library:CreateWindow(Name)
                 end
             end)
 
-            local EndCon
-            EndCon = UserInputService.InputEnded:Connect(function(EndInput)
+            UserInputService.InputEnded:Connect(function(EndInput)
                 if EndInput.UserInputType == Enum.UserInputType.MouseButton1 then
                     MoveCon:Disconnect()
-                    EndCon:Disconnect()
-                    TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = CurrentRestingSize}):Play()
-                end
-            end)
-        end
-    end)
-
-    -- Resize Logic
-    ResizeGrip.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            local StartSize = MainFrame.AbsoluteSize
-            local MouseStart = Input.Position
-
-            local ResizeCon = UserInputService.InputChanged:Connect(function(MoveInput)
-                if MoveInput.UserInputType == Enum.UserInputType.MouseMovement then
-                    local Delta = MoveInput.Position - MouseStart
-                    local NewSize = UDim2.new(0, math.max(200, StartSize.X + Delta.X), 0, math.max(120, StartSize.Y + Delta.Y))
-                    MainFrame.Size = NewSize
-                    CurrentRestingSize = NewSize
-                end
-            end)
-
-            local EndCon
-            EndCon = UserInputService.InputEnded:Connect(function(EndInput)
-                if EndInput.UserInputType == Enum.UserInputType.MouseButton1 then
-                    ResizeCon:Disconnect()
-                    EndCon:Disconnect()
+                    TweenService:Create(MainFrame, TweenInfo.new(0.2), {Size = UDim2.new(0, 320, 0, 250)}):Play()
                 end
             end)
         end
@@ -128,52 +90,102 @@ function Library:CreateWindow(Name)
 
     local Elements = {}
 
+    -- 1. BUTTON
     function Elements:CreateButton(Text, Callback)
         local Button = Instance.new("TextButton")
         local BCorner = Instance.new("UICorner")
-        Button.Size = UDim2.new(1, 0, 0, 32)
+        Button.Size = UDim2.new(1, 0, 0, 35)
         Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         Button.Text = "  " .. Text
-        Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
         Button.Font = Enum.Font.Gotham
         Button.TextSize = 13
         Button.TextXAlignment = Enum.TextXAlignment.Left
         Button.Parent = Container
-        BCorner.CornerRadius = UDim.new(0, 4)
+        BCorner.CornerRadius = UDim.new(0, 6)
         BCorner.Parent = Button
-        
         Button.MouseButton1Click:Connect(Callback)
     end
 
+    -- 2. TOGGLE
     function Elements:CreateToggle(Text, Callback)
         local Toggled = false
         local Button = Instance.new("TextButton")
-        local BCorner = Instance.new("UICorner")
         local Indicator = Instance.new("Frame")
         local ICorner = Instance.new("UICorner")
 
-        Button.Size = UDim2.new(1, 0, 0, 32)
+        Button.Size = UDim2.new(1, 0, 0, 35)
         Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         Button.Text = "  " .. Text
-        Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
         Button.Font = Enum.Font.Gotham
         Button.TextSize = 13
         Button.TextXAlignment = Enum.TextXAlignment.Left
         Button.Parent = Container
-        BCorner.CornerRadius = UDim.new(0, 4)
-        BCorner.Parent = Button
+        Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
 
-        Indicator.Size = UDim2.new(0, 20, 0, 20)
-        Indicator.Position = UDim2.new(1, -26, 0.5, -10)
+        Indicator.Size = UDim2.new(0, 24, 0, 24)
+        Indicator.Position = UDim2.new(1, -30, 0.5, -12)
         Indicator.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         Indicator.Parent = Button
-        ICorner.CornerRadius = UDim.new(0, 4)
         ICorner.Parent = Indicator
 
         Button.MouseButton1Click:Connect(function()
             Toggled = not Toggled
-            TweenService:Create(Indicator, TweenInfo.new(0.2), {BackgroundColor3 = Toggled and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(50, 50, 50)}):Play()
+            TweenService:Create(Indicator, TweenInfo.new(0.2), {BackgroundColor3 = Toggled and Color3.fromRGB(0, 170, 255) or Color3.fromRGB(50, 50, 50)}):Play()
             Callback(Toggled)
+        end)
+    end
+
+    -- 3. SLIDER
+    function Elements:CreateSlider(Text, Min, Max, Callback)
+        local SliderFrame = Instance.new("Frame")
+        local Title = Instance.new("TextLabel")
+        local Bar = Instance.new("Frame")
+        local Fill = Instance.new("Frame")
+        
+        SliderFrame.Size = UDim2.new(1, 0, 0, 45)
+        SliderFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        SliderFrame.Parent = Container
+        Instance.new("UICorner", SliderFrame)
+
+        Title.Size = UDim2.new(1, 0, 0, 20)
+        Title.Position = UDim2.new(0, 10, 0, 5)
+        Title.Text = Text
+        Title.TextColor3 = Color3.fromRGB(200, 200, 200)
+        Title.BackgroundTransparency = 1
+        Title.Font = Enum.Font.Gotham
+        Title.TextSize = 12
+        Title.TextXAlignment = Enum.TextXAlignment.Left
+        Title.Parent = SliderFrame
+
+        Bar.Size = UDim2.new(1, -20, 0, 4)
+        Bar.Position = UDim2.new(0, 10, 0, 30)
+        Bar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        Bar.Parent = SliderFrame
+
+        Fill.Size = UDim2.new(0, 0, 1, 0)
+        Fill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        Fill.Parent = Bar
+
+        local function Update(Input)
+            local Size = math.clamp((Input.Position.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+            Fill.Size = UDim2.new(Size, 0, 1, 0)
+            local Value = math.floor(Min + (Max - Min) * Size)
+            Title.Text = Text .. ": " .. tostring(Value)
+            Callback(Value)
+        end
+
+        Bar.InputBegan:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                Update(Input)
+                local Move = UserInputService.InputChanged:Connect(function(Input)
+                    if Input.UserInputType == Enum.UserInputType.MouseMovement then Update(Input) end
+                end)
+                UserInputService.InputEnded:Connect(function(Input)
+                    if Input.UserInputType == Enum.UserInputType.MouseButton1 then Move:Disconnect() end
+                end)
+            end
         end)
     end
 
