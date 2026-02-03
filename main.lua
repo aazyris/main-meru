@@ -370,55 +370,69 @@ end
 	TitleLabel.TextXAlignment         = Enum.TextXAlignment.Left
 	TitleLabel.Parent                 = TitleBar
 
-	-- Minimize button
+	-- Minimize character (text label)
+	local MinLabel = Instance.new("TextLabel")
+	MinLabel.Size                   = UDim2.new(0, 20, 1, 0)
+	MinLabel.Position               = UDim2.new(1, -70, 0, 0)
+	MinLabel.BackgroundTransparency = 1
+	MinLabel.Text                   = "─"
+	MinLabel.TextColor3             = Colors.TextDim
+	MinLabel.TextSize               = 20
+	MinLabel.Font                   = Enum.Font.GothamBold
+	MinLabel.Parent                 = TitleBar
+
+	-- Minimize click area (invisible button)
 	local MinButton = Instance.new("TextButton")
-	MinButton.Size                   = UDim2.new(0, 40, 1, 0)
+	MinButton.Size                   = UDim2.new(0, 30, 1, 0)
 	MinButton.Position               = UDim2.new(1, -75, 0, 0)
-	MinButton.BackgroundColor3 = Colors.ElementHover
-	MinButton.Text                   = "─"
-	MinButton.TextColor3             = Colors.TextActive
-	MinButton.TextSize               = 20
-	MinButton.Font                   = Enum.Font.GothamBold
+	MinButton.BackgroundTransparency = 1
+	MinButton.Text                   = ""
 	MinButton.Parent                 = TitleBar
-	Instance.new("UICorner", MinButton).CornerRadius = UDim.new(0, 6)
 
 	RegisterHover(MinButton,
 		function() 
-			MinButton.BackgroundColor3 = Colors.ElementActive
-			TweenPlay(MinButton, { Size = UDim2.new(0, 45, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+			MinLabel.TextColor3 = Colors.TextActive
+			TweenPlay(MinLabel, { TextSize = 22 }, 0.1, Enum.EasingStyle.Quart)
 		end,
 		function() 
-			MinButton.BackgroundColor3 = Colors.ElementHover
-			TweenPlay(MinButton, { Size = UDim2.new(0, 40, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+			MinLabel.TextColor3 = Colors.TextDim
+			TweenPlay(MinLabel, { TextSize = 20 }, 0.1, Enum.EasingStyle.Quart)
 		end
 	)
 
 	MinButton.MouseButton1Click:Connect(function()
 		Minimized = not Minimized
-		MinButton.Text = Minimized and "⬆" or "─"
+		MinLabel.Text = Minimized and "⬆" or "─"
 		TweenPlay(MainFrame, { Size = Minimized and MinimizedSize or WindowSize }, 0.3, Enum.EasingStyle.Quart)
 	end)
 
-	-- Close button
+	-- Close character (text label)
+	local CloseLabel = Instance.new("TextLabel")
+	CloseLabel.Size                   = UDim2.new(0, 20, 1, 0)
+	CloseLabel.Position               = UDim2.new(1, -35, 0, 0)
+	CloseLabel.BackgroundTransparency = 1
+	CloseLabel.Text                   = "×"
+	CloseLabel.TextColor3             = Color3.fromRGB(255, 100, 100)
+	CloseLabel.TextSize               = 22
+	CloseLabel.Font                   = Enum.Font.GothamBold
+	CloseLabel.Parent                 = TitleBar
+
+	-- Close click area (invisible button)
 	local CloseButton = Instance.new("TextButton")
-	CloseButton.Size                   = UDim2.new(0, 40, 1, 0)
-	CloseButton.Position               = UDim2.new(1, -30, 0, 0)
-	CloseButton.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
-	CloseButton.Text                   = "×"
-	CloseButton.TextColor3             = Color3.fromRGB(255, 100, 100)
-	CloseButton.TextSize               = 22
-	CloseButton.Font                   = Enum.Font.GothamBold
+	CloseButton.Size                   = UDim2.new(0, 30, 1, 0)
+	CloseButton.Position               = UDim2.new(1, -40, 0, 0)
+	CloseButton.BackgroundTransparency = 1
+	CloseButton.Text                   = ""
 	CloseButton.Parent                 = TitleBar
-	Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 6)
 
 	RegisterHover(CloseButton,
 		function() 
-			CloseButton.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
-			TweenPlay(CloseButton, { Size = UDim2.new(0, 45, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+			CloseLabel.TextColor3 = Color3.fromRGB(255, 150, 150)
+			TweenPlay(CloseLabel, { TextSize = 24 }, 0.1, Enum.EasingStyle.Quart)
 		end,
 		function() 
-			CloseButton.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
-			TweenPlay(CloseButton, { Size = UDim2.new(0, 40, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+			CloseLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+			TweenPlay(CloseLabel, { TextSize = 22 }, 0.1, Enum.EasingStyle.Quart)
 		end
 	)
 
