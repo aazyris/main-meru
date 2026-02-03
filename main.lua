@@ -6,17 +6,17 @@ local CoreGui         = game:GetService("CoreGui")
 
 -- ── Palette ─────────────────────────────────────────────────
 local Colors = {
-	BG            = Color3.fromRGB(18, 18, 22),
-	Panel         = Color3.fromRGB(26, 26, 32),
-	Element       = Color3.fromRGB(34, 34, 42),
-	ElementHover  = Color3.fromRGB(44, 44, 54),
-	ElementActive = Color3.fromRGB(52, 52, 66),
-	TitleBar      = Color3.fromRGB(22, 22, 28),
-	Text          = Color3.fromRGB(220, 220, 228),
-	TextDim       = Color3.fromRGB(130, 130, 140),
+	BG            = Color3.fromRGB(15, 15, 15),
+	Panel         = Color3.fromRGB(25, 25, 25),
+	Element       = Color3.fromRGB(35, 35, 35),
+	ElementHover  = Color3.fromRGB(45, 45, 45),
+	ElementActive = Color3.fromRGB(55, 55, 55),
+	TitleBar      = Color3.fromRGB(20, 20, 20),
+	Text          = Color3.fromRGB(240, 240, 240),
+	TextDim       = Color3.fromRGB(140, 140, 140),
 	TextActive    = Color3.fromRGB(255, 255, 255),
-	Accent        = Color3.fromRGB(90, 160, 255),
-	Ripple        = Color3.fromRGB(90, 160, 255),
+	Accent        = Color3.fromRGB(80, 80, 80),
+	Ripple        = Color3.fromRGB(100, 100, 100),
 }
 
 -- ── Helpers ─────────────────────────────────────────────────
@@ -131,7 +131,140 @@ function Library:Notify(Text, Duration, Type)
 	end)
 end
 
-function Library:CreateWindow()
+-- ── Detached Circular Menu ─────────────────────────────────────
+	local CircleMenu = {
+		Expanded = false,
+		Buttons = {},
+		Dragging = false,
+		DragStart = nil,
+		StartPos = nil,
+		CurrentPos = Vector2.new(100, 100),
+		TargetPos = Vector2.new(100, 100)
+	}
+
+	-- Main circle button
+	local MainCircle = Instance.new("Frame")
+	MainCircle.Size             = UDim2.new(0, 60, 0, 60)
+	MainCircle.Position         = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
+	MainCircle.BackgroundColor3 = Colors.Accent
+	MainCircle.AnchorPoint      = Vector2.new(0.5, 0.5)
+	MainCircle.Parent           = ScreenGui
+	Instance.new("UICorner", MainCircle).CornerRadius = UDim.new(1, 0)
+
+	-- Main button icon
+	local MainIcon = Instance.new("TextLabel")
+	MainIcon.Size             = UDim2.new(1, 0, 1, 0)
+	MainIcon.BackgroundTransparency = 1
+	MainIcon.Text             = "☰"
+	MainIcon.TextColor3       = Colors.TextActive
+	MainIcon.Font             = Enum.Font.GothamBold
+	MainIcon.TextSize         = 24
+	MainIcon.Parent           = MainCircle
+
+	-- Drag functionality for main circle
+	MainCircle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			CircleMenu.Dragging = true
+			CircleMenu.DragStart = input.Position
+			CircleMenu.StartPos = CircleMenu.CurrentPos
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if CircleMenu.Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - CircleMenu.DragStart
+			CircleMenu.TargetPos = Vector2.new(
+				CircleMenu.StartPos.X + delta.X,
+				CircleMenu.StartPos.Y + delta.Y
+			)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and CircleMenu.Dragging then
+			CircleMenu.Dragging = false
+		end
+	end)
+
+	-- Smooth drag animation
+	RunService.Heartbeat:Connect(function(dt)
+		if not CircleMenu.Dragging then
+			CircleMenu.CurrentPos = CircleMenu.CurrentPos:Lerp(CircleMenu.TargetPos, 0.15)
+			MainCircle.Position = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
+		else
+			MainCircle.Position = UDim2.new(0, CircleMenu.TargetPos.X, 0, CircleMenu.TargetPos.Y)
+		end
+	end)
+
+	-- Create expandable buttons
+	local function CreateCircleButton(index, total, text, callback)
+		local angle = (index - 1) * (2 * math.pi / total) - math.pi/2
+		local radius = 80
+		
+		local Button = Instance.new("Frame")
+		Button.Size             = UDim2.new(0, 50, 0, 50)
+		Button.Position         = UDim2.new(0, 0, 0, 0)
+		Button.BackgroundColor3 = Colors.ElementHover
+		Button.AnchorPoint      = Vector2.new(0.5, 0.5)
+		Button.Visible          = false
+		Button.Parent           = ScreenGui
+		Instance.new("UICorner", Button).CornerRadius = UDim.new(1, 0)
+
+		local Icon = Instance.new("TextLabel")
+		Icon.Size             = UDim2.new(1, 0, 1, 0)
+		Icon.BackgroundTransparency = 1
+		Icon.Text             = text
+		Icon.TextColor3       = Colors.TextActive
+		Icon.Font             = Enum.Font.GothamBold
+		Icon.TextSize         = 16
+		Icon.Parent           = Button
+
+		Button.MouseButton1Click:Connect(callback)
+		table.insert(CircleMenu.Buttons, {Button = Button, Angle = angle, Radius = radius})
+	end
+
+	-- Add some example buttons
+	CreateCircleButton(1, 4, "C", function() Library:Notify("Combat tab", 2, "info") end)
+	CreateCircleButton(2, 4, "M", function() Library:Notify("Movement tab", 2, "info") end)
+	CreateCircleButton(3, 4, "V", function() Library:Notify("Visual tab", 2, "info") end)
+	CreateCircleButton(4, 4, "S", function() Library:Notify("Settings tab", 2, "info") end)
+
+	-- Toggle expand/collapse
+	MainCircle.MouseButton1Click:Connect(function()
+		if not CircleMenu.Dragging then
+			CircleMenu.Expanded = not CircleMenu.Expanded
+			
+			if CircleMenu.Expanded then
+				-- Expand animation
+				for i, buttonData in ipairs(CircleMenu.Buttons) do
+					buttonData.Button.Visible = true
+					local targetX = math.cos(buttonData.Angle) * buttonData.Radius
+					local targetY = math.sin(buttonData.Angle) * buttonData.Radius
+					
+					TweenPlay(buttonData.Button, {
+						Position = UDim2.new(0, CircleMenu.CurrentPos.X + targetX, 0, CircleMenu.CurrentPos.Y + targetY),
+						Size = UDim2.new(0, 50, 0, 50)
+					}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+				end
+				MainIcon.Text = "×"
+			else
+				-- Collapse animation
+				for _, buttonData in ipairs(CircleMenu.Buttons) do
+					TweenPlay(buttonData.Button, {
+						Position = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y),
+						Size = UDim2.new(0, 0, 0, 0)
+					}, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+					
+					task.delay(0.2, function()
+						buttonData.Button.Visible = false
+					end)
+				end
+				MainIcon.Text = "☰"
+			end
+		end
+	end)
+
+	function Library:CreateWindow()
 	local Name = "Meru"
 
 	-- kill previous
@@ -237,18 +370,25 @@ function Library:CreateWindow()
 
 	-- Minimize button
 	local MinButton = Instance.new("TextButton")
-	MinButton.Size                   = UDim2.new(0, 35, 1, 0)
-	MinButton.Position               = UDim2.new(1, -70, 0, 0)
-	MinButton.BackgroundTransparency = 1
+	MinButton.Size                   = UDim2.new(0, 40, 1, 0)
+	MinButton.Position               = UDim2.new(1, -75, 0, 0)
+	MinButton.BackgroundColor3 = Colors.ElementHover
 	MinButton.Text                   = "─"
-	MinButton.TextColor3             = Colors.TextDim
-	MinButton.TextSize               = 18
-	MinButton.Font                   = Enum.Font.Gotham
+	MinButton.TextColor3             = Colors.TextActive
+	MinButton.TextSize               = 20
+	MinButton.Font                   = Enum.Font.GothamBold
 	MinButton.Parent                 = TitleBar
+	Instance.new("UICorner", MinButton).CornerRadius = UDim.new(0, 6)
 
 	RegisterHover(MinButton,
-		function() MinButton.TextColor3 = Colors.TextActive end,
-		function() MinButton.TextColor3 = Colors.TextDim end
+		function() 
+			MinButton.BackgroundColor3 = Colors.ElementActive
+			TweenPlay(MinButton, { Size = UDim2.new(0, 45, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+		end,
+		function() 
+			MinButton.BackgroundColor3 = Colors.ElementHover
+			TweenPlay(MinButton, { Size = UDim2.new(0, 40, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+		end
 	)
 
 	MinButton.MouseButton1Click:Connect(function()
@@ -259,18 +399,25 @@ function Library:CreateWindow()
 
 	-- Close button
 	local CloseButton = Instance.new("TextButton")
-	CloseButton.Size                   = UDim2.new(0, 35, 1, 0)
-	CloseButton.Position               = UDim2.new(1, -35, 0, 0)
-	CloseButton.BackgroundTransparency = 1
+	CloseButton.Size                   = UDim2.new(0, 40, 1, 0)
+	CloseButton.Position               = UDim2.new(1, -30, 0, 0)
+	CloseButton.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
 	CloseButton.Text                   = "×"
-	CloseButton.TextColor3             = Colors.TextDim
-	CloseButton.TextSize               = 20
-	CloseButton.Font                   = Enum.Font.Gotham
+	CloseButton.TextColor3             = Color3.fromRGB(255, 100, 100)
+	CloseButton.TextSize               = 22
+	CloseButton.Font                   = Enum.Font.GothamBold
 	CloseButton.Parent                 = TitleBar
+	Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 6)
 
 	RegisterHover(CloseButton,
-		function() CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100) end,
-		function() CloseButton.TextColor3 = Colors.TextDim end
+		function() 
+			CloseButton.BackgroundColor3 = Color3.fromRGB(80, 30, 30)
+			TweenPlay(CloseButton, { Size = UDim2.new(0, 45, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+		end,
+		function() 
+			CloseButton.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
+			TweenPlay(CloseButton, { Size = UDim2.new(0, 40, 1, 0) }, 0.2, Enum.EasingStyle.Quart)
+		end
 	)
 
 	CloseButton.MouseButton1Click:Connect(function()
@@ -517,10 +664,22 @@ function Library:CreateWindow()
 		Page.Size                   = UDim2.new(1, 0, 1, 0)
 		Page.BackgroundTransparency = 1
 		Page.Visible                = false
-		Page.ScrollBarThickness     = 3
+		Page.ScrollBarThickness     = 8
 		Page.ScrollBarImageColor3   = Colors.Accent
+		Page.ScrollBarImageTransparency = 0.3
 		Page.AutomaticCanvasSize    = Enum.AutomaticSize.Y
+		-- Smooth scrolling
+		Page.ElasticBehavior = true
+		Page.ScrollingDirection = Enum.ScrollingDirection.Y
 		Page.Parent                 = ContentContainer
+
+		-- Custom scrollbar styling
+		local ScrollingFrame = Page
+		ScrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+			-- Smooth scroll animation
+			local targetPos = ScrollingFrame.CanvasPosition
+			TweenPlay(ScrollingFrame, { CanvasPosition = targetPos }, 0.1, Enum.EasingStyle.Quart)
+		end)
 
 		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
 		Instance.new("UIPadding", Page).PaddingTop  = UDim.new(0, 8)
