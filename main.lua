@@ -143,12 +143,13 @@ end
 	}
 
 	-- Main circle button
-	local MainCircle = Instance.new("Frame")
+	local MainCircle = Instance.new("TextButton")
 	MainCircle.Size             = UDim2.new(0, 60, 0, 60)
 	MainCircle.Position         = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
 	MainCircle.BackgroundColor3 = Colors.Accent
 	MainCircle.AnchorPoint      = Vector2.new(0.5, 0.5)
 	MainCircle.Parent           = ScreenGui
+	MainCircle.Text             = ""
 	Instance.new("UICorner", MainCircle).CornerRadius = UDim.new(1, 0)
 
 	-- Main button icon
