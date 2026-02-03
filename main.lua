@@ -34,104 +34,143 @@ local function TweenPlay(instance, props, duration, style, direction)
 	return t
 end
 
--- ── Notification System ─────────────────────────────────────
-local Notifications = {}
-local NotificationQueue = {}
+function Library:CreateWindow()
+	local Name = "Meru"
 
-function Library:Notify(Text, Duration, Type)
-	Duration = Duration or 3
-	Type = Type or "info" -- info, success, warning, error
-	
-	local Notification = Instance.new("Frame")
-	Notification.Size             = UDim2.new(0, 320, 0, 70)
-	Notification.Position         = UDim2.new(1, 340, 0, 20)
-	Notification.BackgroundColor3 = Type == "success" and Color3.fromRGB(40, 120, 40) 
-	                               or Type == "warning" and Color3.fromRGB(180, 120, 0)
-	                               or Type == "error" and Color3.fromRGB(180, 40, 40)
-	                               or Colors.Element
-	Notification.Parent           = ScreenGui
-	Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
-	Instance.new("UIStroke", Notification).Color = Colors.Accent
-	Instance.new("UIStroke", Notification).Thickness = 1
+	-- kill previous
+	local prev = CoreGui:FindFirstChild(Name .. "_Hub")
+	if prev then prev:Destroy() end
 
-	-- Icon background
-	local IconBg = Instance.new("Frame")
-	IconBg.Size             = UDim2.new(0, 32, 0, 32)
-	IconBg.Position         = UDim2.new(0, 12, 0.5, -16)
-	IconBg.BackgroundColor3 = Type == "success" and Color3.fromRGB(60, 140, 60)
-	                         or Type == "warning" and Color3.fromRGB(200, 140, 20)
-	                         or Type == "error" and Color3.fromRGB(200, 60, 60)
-	                         or Colors.Accent
-	IconBg.Parent           = Notification
-	Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
+	-- ── Hover poller (CoreGui-safe) ─────────────────────────
+	local HoverTargets = {}
 
-	-- Icon
-	local Icon = Instance.new("TextLabel")
-	Icon.Size             = UDim2.new(1, 0, 1, 0)
-	Icon.BackgroundTransparency = 1
-	Icon.Text             = Type == "success" and "✓" 
-	                     or Type == "warning" and "!"
-	                     or Type == "error" and "×"
-	                     or "i"
-	Icon.TextColor3       = Colors.TextActive
-	Icon.Font             = Enum.Font.GothamBold
-	Icon.TextSize         = 18
-	Icon.Parent           = IconBg
+	local function RegisterHover(guiObj, onEnter, onLeave)
+		table.insert(HoverTargets, { instance = guiObj, onEnter = onEnter, onLeave = onLeave, inside = false })
+	end
 
-	-- Title
-	local Title = Instance.new("TextLabel")
-	Title.Size                   = UDim2.new(1, -60, 0, 20)
-	Title.Position               = UDim2.new(0, 55, 0, 8)
-	Title.BackgroundTransparency = 1
-	Title.Text                   = Type == "success" and "Success"
-	                         or Type == "warning" and "Warning"
-	                         or Type == "error" and "Error"
-	                         or "Information"
-	Title.TextColor3             = Colors.TextActive
-	Title.Font                   = Enum.Font.GothamBold
-	Title.TextSize               = 14
-	Title.TextXAlignment         = Enum.TextXAlignment.Left
-	Title.Parent                 = Notification
+	local function IsMouseOver(guiObj)
+		local pos = UserInputService:GetMouseLocation()
+		local abs = guiObj.AbsolutePosition
+		local sz  = guiObj.AbsoluteSize
+		return pos.X >= abs.X and pos.X <= abs.X + sz.X
+			and pos.Y >= abs.Y and pos.Y <= abs.Y + sz.Y
+	end
 
-	-- Message
-	local Message = Instance.new("TextLabel")
-	Message.Size                   = UDim2.new(1, -60, 0, 30)
-	Message.Position               = UDim2.new(0, 55, 0, 28)
-	Message.BackgroundTransparency = 1
-	Message.Text                   = Text
-	Message.TextColor3             = Colors.Text
-	Message.Font                   = Enum.Font.Gotham
-	Message.TextSize               = 12
-	Message.TextXAlignment         = Enum.TextXAlignment.Left
-	Message.TextYAlignment         = Enum.TextYAlignment.Top
-	Message.TextWrapped           = true
-	Message.Parent                 = Notification
-
-	-- Progress bar
-	local Progress = Instance.new("Frame")
-	Progress.Size             = UDim2.new(1, 0, 0, 2)
-	Progress.Position         = UDim2.new(0, 0, 1, -2)
-	Progress.BackgroundColor3 = Colors.Accent
-	Progress.Parent           = Notification
-
-	-- Slide in animation
-	TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-
-	-- Progress bar animation
-	TweenPlay(Progress, { Size = UDim2.new(0, 0, 0, 2) }, Duration, Enum.EasingStyle.Linear)
-
-	-- Auto remove
-	task.delay(Duration, function()
-		if Notification and Notification.Parent then
-			TweenPlay(Notification, { Position = UDim2.new(1, 340, 0, 20) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-			task.delay(0.35, function()
-				if Notification and Notification.Parent then Notification:Destroy() end
-			end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+		for _, h in ipairs(HoverTargets) do
+			if h.instance and h.instance.Parent then
+				local over = IsMouseOver(h.instance)
+				if over and not h.inside then
+					h.inside = true;  h.onEnter()
+				elseif not over and h.inside then
+					h.inside = false; h.onLeave()
+				end
+			end
 		end
 	end)
-end
 
--- ── Detached Circular Menu ─────────────────────────────────────
+	-- ── ScreenGui ───────────────────────────────────────────
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name         = Name .. "_Hub"
+	ScreenGui.ResetOnSpawn = false
+	ScreenGui.Parent       = CoreGui
+
+	-- ── Notification System ─────────────────────────────────
+	function Library:Notify(Text, Duration, Type)
+		Duration = Duration or 3
+		Type = Type or "info" -- info, success, warning, error
+		
+		local Notification = Instance.new("Frame")
+		Notification.Size             = UDim2.new(0, 320, 0, 70)
+		Notification.Position         = UDim2.new(1, 340, 0, 20)
+		Notification.BackgroundColor3 = Type == "success" and Color3.fromRGB(40, 120, 40) 
+		                               or Type == "warning" and Color3.fromRGB(180, 120, 0)
+		                               or Type == "error" and Color3.fromRGB(180, 40, 40)
+		                               or Colors.Element
+		Notification.Parent           = ScreenGui
+		Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
+		Instance.new("UIStroke", Notification).Color = Colors.Accent
+		Instance.new("UIStroke", Notification).Thickness = 1
+
+		-- Icon background
+		local IconBg = Instance.new("Frame")
+		IconBg.Size             = UDim2.new(0, 32, 0, 32)
+		IconBg.Position         = UDim2.new(0, 12, 0.5, -16)
+		IconBg.BackgroundColor3 = Type == "success" and Color3.fromRGB(60, 140, 60)
+		                         or Type == "warning" and Color3.fromRGB(200, 140, 20)
+		                         or Type == "error" and Color3.fromRGB(200, 60, 60)
+		                         or Colors.Accent
+		IconBg.Parent           = Notification
+		Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
+
+		-- Icon
+		local Icon = Instance.new("TextLabel")
+		Icon.Size             = UDim2.new(1, 0, 1, 0)
+		Icon.BackgroundTransparency = 1
+		Icon.Text             = Type == "success" and "✓" 
+		                     or Type == "warning" and "!"
+		                     or Type == "error" and "×"
+		                     or "i"
+		Icon.TextColor3       = Colors.TextActive
+		Icon.Font             = Enum.Font.GothamBold
+		Icon.TextSize         = 18
+		Icon.Parent           = IconBg
+
+		-- Title
+		local Title = Instance.new("TextLabel")
+		Title.Size                   = UDim2.new(1, -60, 0, 20)
+		Title.Position               = UDim2.new(0, 55, 0, 8)
+		Title.BackgroundTransparency = 1
+		Title.Text                   = Type == "success" and "Success"
+		                         or Type == "warning" and "Warning"
+		                         or Type == "error" and "Error"
+		                         or "Information"
+		Title.TextColor3             = Colors.TextActive
+		Title.Font                   = Enum.Font.GothamBold
+		Title.TextSize               = 14
+		Title.TextXAlignment         = Enum.TextXAlignment.Left
+		Title.Parent                 = Notification
+
+		-- Message
+		local Message = Instance.new("TextLabel")
+		Message.Size                   = UDim2.new(1, -60, 0, 30)
+		Message.Position               = UDim2.new(0, 55, 0, 28)
+		Message.BackgroundTransparency = 1
+		Message.Text                   = Text
+		Message.TextColor3             = Colors.Text
+		Message.Font                   = Enum.Font.Gotham
+		Message.TextSize               = 12
+		Message.TextXAlignment         = Enum.TextXAlignment.Left
+		Message.TextYAlignment         = Enum.TextYAlignment.Top
+		Message.TextWrapped           = true
+		Message.Parent                 = Notification
+
+		-- Progress bar
+		local Progress = Instance.new("Frame")
+		Progress.Size             = UDim2.new(1, 0, 0, 2)
+		Progress.Position         = UDim2.new(0, 0, 1, -2)
+		Progress.BackgroundColor3 = Colors.Accent
+		Progress.Parent           = Notification
+
+		-- Slide in animation
+		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
+		-- Progress bar animation
+		TweenPlay(Progress, { Size = UDim2.new(0, 0, 0, 2) }, Duration, Enum.EasingStyle.Linear)
+
+		-- Auto remove
+		task.delay(Duration, function()
+			if Notification and Notification.Parent then
+				TweenPlay(Notification, { Position = UDim2.new(1, 340, 0, 20) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+				task.delay(0.35, function()
+					if Notification and Notification.Parent then Notification:Destroy() end
+				end)
+			end
+		end)
+	end
+
+	-- ── Detached Circular Menu ─────────────────────────────────────
 	local CircleMenu = {
 		Expanded = false,
 		Buttons = {},
@@ -194,6 +233,16 @@ end
 			MainCircle.Position = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
 		else
 			MainCircle.Position = UDim2.new(0, CircleMenu.TargetPos.X, 0, CircleMenu.TargetPos.Y)
+			CircleMenu.CurrentPos = CircleMenu.TargetPos
+		end
+		
+		-- Update button positions when expanded and dragging
+		if CircleMenu.Expanded then
+			for _, buttonData in ipairs(CircleMenu.Buttons) do
+				local targetX = math.cos(buttonData.Angle) * buttonData.Radius
+				local targetY = math.sin(buttonData.Angle) * buttonData.Radius
+				buttonData.Button.Position = UDim2.new(0, CircleMenu.CurrentPos.X + targetX, 0, CircleMenu.CurrentPos.Y + targetY)
+			end
 		end
 	end)
 
@@ -204,7 +253,7 @@ end
 		
 		local Button = Instance.new("TextButton")
 		Button.Size             = UDim2.new(0, 50, 0, 50)
-		Button.Position         = UDim2.new(0, 0, 0, 0)
+		Button.Position         = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
 		Button.BackgroundColor3 = Colors.ElementHover
 		Button.AnchorPoint      = Vector2.new(0.5, 0.5)
 		Button.Visible          = false
@@ -266,48 +315,6 @@ end
 		end
 	end)
 
-	function Library:CreateWindow()
-	local Name = "Meru"
-
-	-- kill previous
-	local prev = CoreGui:FindFirstChild(Name .. "_Hub")
-	if prev then prev:Destroy() end
-
-	-- ── Hover poller (CoreGui-safe) ─────────────────────────
-	local HoverTargets = {}
-
-	local function RegisterHover(guiObj, onEnter, onLeave)
-		table.insert(HoverTargets, { instance = guiObj, onEnter = onEnter, onLeave = onLeave, inside = false })
-	end
-
-	local function IsMouseOver(guiObj)
-		local pos = UserInputService:GetMouseLocation()
-		local abs = guiObj.AbsolutePosition
-		local sz  = guiObj.AbsoluteSize
-		return pos.X >= abs.X and pos.X <= abs.X + sz.X
-			and pos.Y >= abs.Y and pos.Y <= abs.Y + sz.Y
-	end
-
-	UserInputService.InputChanged:Connect(function(input)
-		if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-		for _, h in ipairs(HoverTargets) do
-			if h.instance and h.instance.Parent then
-				local over = IsMouseOver(h.instance)
-				if over and not h.inside then
-					h.inside = true;  h.onEnter()
-				elseif not over and h.inside then
-					h.inside = false; h.onLeave()
-				end
-			end
-		end
-	end)
-
-	-- ── ScreenGui ───────────────────────────────────────────
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.Name         = Name .. "_Hub"
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.Parent       = CoreGui
-
 	-- ── Main Frame ──────────────────────────────────────────
 	local WindowSize    = UDim2.new(0, 600, 0, 450)
 	local MinimizedSize = UDim2.new(0, 600, 0, 35)
@@ -333,7 +340,7 @@ end
 	ResizeHandle.BackgroundColor3 = Colors.Accent
 	ResizeHandle.BackgroundTransparency = 0.7
 	ResizeHandle.Parent           = MainFrame
-	Instance.new("UICorner", ResizeHandle).CornerRadius = UDim.new(0, 0, 0, 4, 0, 0)
+	Instance.new("UICorner", ResizeHandle).CornerRadius = UDim.new(0, 4)
 
 	-- ── Title Bar ───────────────────────────────────────────
 	local TitleBar = Instance.new("Frame")
@@ -672,21 +679,14 @@ end
 		Page.ScrollBarImageColor3   = Colors.Accent
 		Page.ScrollBarImageTransparency = 0.3
 		Page.AutomaticCanvasSize    = Enum.AutomaticSize.Y
-		-- Smooth scrolling
-		Page.ElasticBehavior = true
-		Page.ScrollingDirection = Enum.ScrollingDirection.Y
+		Page.ElasticBehavior        = true
+		Page.ScrollingDirection     = Enum.ScrollingDirection.Y
 		Page.Parent                 = ContentContainer
-
-		-- Custom scrollbar styling
-		local ScrollingFrame = Page
-		ScrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-			-- Smooth scroll animation
-			local targetPos = ScrollingFrame.CanvasPosition
-			TweenPlay(ScrollingFrame, { CanvasPosition = targetPos }, 0.1, Enum.EasingStyle.Quart)
-		end)
 
 		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
 		Instance.new("UIPadding", Page).PaddingTop  = UDim.new(0, 8)
+		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 8)
+		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 8)
 
 		-- Register
 		table.insert(AllTabs, { button = TabButton, accent = AccentBar, page = Page })
@@ -703,7 +703,6 @@ end
 
 		-- auto-select first tab
 		if #AllTabs == 1 then
-			-- slight delay so elements are created first, then animate
 			task.delay(0, function() ActivateTab(1) end)
 		end
 
@@ -711,7 +710,6 @@ end
 		local Elements = {}
 
 		-- ── ripple helper ───────────────────────────────────
-		-- spawns a small expanding transparent circle from the click point
 		local function SpawnRipple(parent)
 			local mouse = UserInputService:GetMouseLocation()
 			local relX  = mouse.X - parent.AbsolutePosition.X
@@ -728,7 +726,6 @@ end
 			Ripple.Parent                 = parent
 			Instance.new("UICorner", Ripple).CornerRadius = UDim.new(1, 0)
 
-			-- expand + fade out
 			TweenPlay(Ripple, {
 				Size                  = UDim2.new(0, 80, 0, 80),
 				BackgroundTransparency = 1
@@ -778,7 +775,6 @@ end
 			SliderFrame.Parent           = Page
 			Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 6)
 
-			-- Label
 			local Title = Instance.new("TextLabel")
 			Title.Size                   = UDim2.new(1, -60, 0, 20)
 			Title.Position               = UDim2.new(0, 12, 0, 6)
@@ -790,7 +786,6 @@ end
 			Title.TextXAlignment         = Enum.TextXAlignment.Left
 			Title.Parent                 = SliderFrame
 
-			-- Value readout
 			local ValueLabel = Instance.new("TextLabel")
 			ValueLabel.Size                   = UDim2.new(0, 44, 0, 20)
 			ValueLabel.Position               = UDim2.new(1, -48, 0, 6)
@@ -802,7 +797,6 @@ end
 			ValueLabel.TextXAlignment         = Enum.TextXAlignment.Right
 			ValueLabel.Parent                 = SliderFrame
 
-			-- Track
 			local Bar = Instance.new("Frame")
 			Bar.Size             = UDim2.new(1, -24, 0, 4)
 			Bar.Position         = UDim2.new(0, 12, 0, 36)
@@ -810,14 +804,12 @@ end
 			Bar.Parent           = SliderFrame
 			Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
 
-			-- Fill
 			local Fill = Instance.new("Frame")
 			Fill.Size             = UDim2.new(0, 0, 1, 0)
 			Fill.BackgroundColor3 = Colors.Accent
 			Fill.Parent           = Bar
 			Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
 
-			-- Thumb
 			local Thumb = Instance.new("Frame")
 			Thumb.Size             = UDim2.new(0, 14, 0, 14)
 			Thumb.AnchorPoint      = Vector2.new(0.5, 0.5)
@@ -827,7 +819,6 @@ end
 			Thumb.Parent           = Bar
 			Instance.new("UICorner", Thumb).CornerRadius = UDim.new(1, 0)
 
-			-- ── Slider logic ────────────────────────────────
 			local function SetPercent(pct)
 				pct = math.clamp(pct, 0, 1)
 				Fill.Size      = UDim2.new(pct, 0, 1, 0)
@@ -847,7 +838,6 @@ end
 				return (mx - bx) / bw
 			end
 
-			-- thumb pulse: briefly grow then shrink back
 			local function PulseThumb()
 				TweenPlay(Thumb, { Size = UDim2.new(0, 20, 0, 20) }, 0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				task.delay(0.1, function()
@@ -890,7 +880,6 @@ end
 			ToggleFrame.Parent           = Page
 			Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 6)
 
-			-- Label
 			local Label = Instance.new("TextLabel")
 			Label.Size                   = UDim2.new(1, -60, 1, 0)
 			Label.Position               = UDim2.new(0, 14, 0, 0)
@@ -902,7 +891,6 @@ end
 			Label.TextXAlignment         = Enum.TextXAlignment.Left
 			Label.Parent                 = ToggleFrame
 
-			-- Toggle Switch
 			local Switch = Instance.new("Frame")
 			Switch.Size             = UDim2.new(0, 44, 0, 22)
 			Switch.Position         = UDim2.new(1, -50, 0.5, -11)
@@ -910,7 +898,6 @@ end
 			Switch.Parent           = ToggleFrame
 			Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 11)
 
-			-- Switch Knob
 			local Knob = Instance.new("Frame")
 			Knob.Size             = UDim2.new(0, 18, 0, 18)
 			Knob.Position         = UDim2.new(0, Toggled and 24 or 2, 0, 2)
@@ -931,8 +918,6 @@ end
 			end
 
 			ToggleFrame.MouseButton1Click:Connect(UpdateToggle)
-			Switch.MouseButton1Click:Connect(UpdateToggle)
-			Knob.MouseButton1Click:Connect(UpdateToggle)
 		end
 
 		function Elements:CreateTextbox(Text, Placeholder, Callback)
@@ -943,7 +928,6 @@ end
 			TextboxFrame.Parent           = Page
 			Instance.new("UICorner", TextboxFrame).CornerRadius = UDim.new(0, 6)
 
-			-- Label
 			local Label = Instance.new("TextLabel")
 			Label.Size                   = UDim2.new(1, -16, 0, 20)
 			Label.Position               = UDim2.new(0, 12, 0, 6)
@@ -955,7 +939,6 @@ end
 			Label.TextXAlignment         = Enum.TextXAlignment.Left
 			Label.Parent                 = TextboxFrame
 
-			-- Textbox
 			local Textbox = Instance.new("TextBox")
 			Textbox.Size             = UDim2.new(1, -24, 0, 20)
 			Textbox.Position         = UDim2.new(0, 12, 0, 28)
@@ -986,11 +969,11 @@ end
 			local DropdownFrame = Instance.new("Frame")
 			DropdownFrame.Size             = UDim2.new(1, -16, 0, 36)
 			DropdownFrame.BackgroundColor3 = Colors.Element
-			DropdownFrame.ClipsDescendants = true
+			DropdownFrame.ClipsDescendants = false
+			DropdownFrame.ZIndex = 2
 			DropdownFrame.Parent           = Page
 			Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 6)
 
-			-- Label
 			local Label = Instance.new("TextLabel")
 			Label.Size                   = UDim2.new(1, -40, 1, 0)
 			Label.Position               = UDim2.new(0, 14, 0, 0)
@@ -1002,7 +985,6 @@ end
 			Label.TextXAlignment         = Enum.TextXAlignment.Left
 			Label.Parent                 = DropdownFrame
 
-			-- Dropdown Arrow
 			local Arrow = Instance.new("TextLabel")
 			Arrow.Size             = UDim2.new(0, 20, 1, 0)
 			Arrow.Position         = UDim2.new(1, -20, 0, 0)
@@ -1013,19 +995,23 @@ end
 			Arrow.TextSize         = 10
 			Arrow.Parent           = DropdownFrame
 
-			-- Options Container
 			local OptionsContainer = Instance.new("Frame")
-			OptionsContainer.Size             = UDim2.new(1, -16, 0, 0)
-			OptionsContainer.Position         = UDim2.new(0, 0, 1, 0)
+			OptionsContainer.Size             = UDim2.new(1, 0, 0, 0)
+			OptionsContainer.Position         = UDim2.new(0, 0, 1, 4)
 			OptionsContainer.BackgroundColor3 = Colors.Element
 			OptionsContainer.Visible          = false
-			OptionsContainer.Parent           = Page
+			OptionsContainer.ZIndex           = 10
+			OptionsContainer.Parent           = DropdownFrame
 			Instance.new("UICorner", OptionsContainer).CornerRadius = UDim.new(0, 6)
+			Instance.new("UIStroke", OptionsContainer).Color = Colors.Accent
 
 			local OptionsList = Instance.new("UIListLayout", OptionsContainer)
 			OptionsList.Padding = UDim.new(0, 2)
+			Instance.new("UIPadding", OptionsContainer).PaddingTop = UDim.new(0, 4)
+			Instance.new("UIPadding", OptionsContainer).PaddingBottom = UDim.new(0, 4)
+			Instance.new("UIPadding", OptionsContainer).PaddingLeft = UDim.new(0, 4)
+			Instance.new("UIPadding", OptionsContainer).PaddingRight = UDim.new(0, 4)
 
-			-- Create option buttons
 			for i, option in ipairs(Options) do
 				local OptionButton = Instance.new("TextButton")
 				OptionButton.Size             = UDim2.new(1, -8, 0, 28)
@@ -1034,6 +1020,7 @@ end
 				OptionButton.TextColor3       = Colors.Text
 				OptionButton.Font             = Enum.Font.Gotham
 				OptionButton.TextSize         = 12
+				OptionButton.ZIndex           = 11
 				OptionButton.Parent           = OptionsContainer
 				Instance.new("UICorner", OptionButton).CornerRadius = UDim.new(0, 4)
 
@@ -1043,7 +1030,6 @@ end
 					Open = false
 					OptionsContainer.Visible = false
 					Arrow.Text = "▼"
-					TweenPlay(DropdownFrame, { Size = UDim2.new(1, -16, 0, 36) }, 0.2, Enum.EasingStyle.Quart)
 					if Callback then Callback(option) end
 				end)
 
@@ -1053,8 +1039,7 @@ end
 				)
 			end
 
-			-- Update container size
-			OptionsContainer.AutomaticSize = Enum.AutomaticSize.Y
+			OptionsContainer.Size = UDim2.new(1, 0, 0, (#Options * 30) + 8)
 
 			RegisterHover(DropdownFrame,
 				function() DropdownFrame.BackgroundColor3 = Colors.ElementHover end,
@@ -1065,12 +1050,6 @@ end
 				Open = not Open
 				OptionsContainer.Visible = Open
 				Arrow.Text = Open and "▲" or "▼"
-				
-				if Open then
-					TweenPlay(DropdownFrame, { Size = UDim2.new(1, -16, 0, 36 + OptionsContainer.AbsoluteSize.Y) }, 0.2, Enum.EasingStyle.Quart)
-				else
-					TweenPlay(DropdownFrame, { Size = UDim2.new(1, -16, 0, 36) }, 0.2, Enum.EasingStyle.Quart)
-				end
 			end)
 		end
 
@@ -1084,7 +1063,6 @@ end
 			ColorFrame.Parent           = Page
 			Instance.new("UICorner", ColorFrame).CornerRadius = UDim.new(0, 6)
 
-			-- Label
 			local Label = Instance.new("TextLabel")
 			Label.Size                   = UDim2.new(1, -60, 0, 20)
 			Label.Position               = UDim2.new(0, 12, 0, 6)
@@ -1096,7 +1074,6 @@ end
 			Label.TextXAlignment         = Enum.TextXAlignment.Left
 			Label.Parent                 = ColorFrame
 
-			-- Color Display
 			local ColorDisplay = Instance.new("Frame")
 			ColorDisplay.Size             = UDim2.new(0, 44, 0, 22)
 			ColorDisplay.Position         = UDim2.new(1, -50, 0, 6)
@@ -1104,7 +1081,6 @@ end
 			ColorDisplay.Parent           = ColorFrame
 			Instance.new("UICorner", ColorDisplay).CornerRadius = UDim.new(0, 4)
 
-			-- Color Preview
 			local Preview = Instance.new("Frame")
 			Preview.Size             = UDim2.new(1, -24, 0, 20)
 			Preview.Position         = UDim2.new(0, 12, 0, 28)
@@ -1118,7 +1094,6 @@ end
 			)
 
 			ColorFrame.MouseButton1Click:Connect(function()
-				-- Simple color picker with preset colors
 				local colors = {
 					Color3.fromRGB(255, 0, 0),
 					Color3.fromRGB(0, 255, 0),
@@ -1139,11 +1114,9 @@ end
 		return Elements
 	end
 
-	-- ── Open animation (runs after everything is built) ────
+	-- ── Open animation ────────────────────────────────────
 	task.defer(function()
-		-- bounce open from zero
 		TweenPlay(MainFrame, { Size = WindowSize }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-		-- restore bg transparency (was 0.08 but frame starts invisible at size 0)
 		MainFrame.BackgroundTransparency = 0.08
 	end)
 
