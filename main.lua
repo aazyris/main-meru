@@ -27,7 +27,6 @@ local function Tween(instance, props, duration, style, direction)
 	return TweenService:Create(instance, TweenInfo.new(duration, style, direction), props)
 end
 
--- plays and returns the tween (so caller can :Wait() if needed)
 local function TweenPlay(instance, props, duration, style, direction)
 	local t = Tween(instance, props, duration, style, direction)
 	t:Play()
@@ -41,7 +40,13 @@ function Library:CreateWindow()
 	local prev = CoreGui:FindFirstChild(Name .. "_Hub")
 	if prev then prev:Destroy() end
 
-	-- ── Hover poller (CoreGui-safe) ─────────────────────────
+	-- ── ScreenGui ───────────────────────────────────────────
+	local ScreenGui = Instance.new("ScreenGui")
+	ScreenGui.Name         = Name .. "_Hub"
+	ScreenGui.ResetOnSpawn = false
+	ScreenGui.Parent       = CoreGui
+
+	-- ── Hover poller ─────────────────────────────────────────
 	local HoverTargets = {}
 
 	local function RegisterHover(guiObj, onEnter, onLeave)
@@ -70,16 +75,10 @@ function Library:CreateWindow()
 		end
 	end)
 
-	-- ── ScreenGui ───────────────────────────────────────────
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.Name         = Name .. "_Hub"
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.Parent       = CoreGui
-
 	-- ── Notification System ─────────────────────────────────
 	function Library:Notify(Text, Duration, Type)
 		Duration = Duration or 3
-		Type = Type or "info" -- info, success, warning, error
+		Type = Type or "info"
 		
 		local Notification = Instance.new("Frame")
 		Notification.Size             = UDim2.new(0, 320, 0, 70)
@@ -90,10 +89,10 @@ function Library:CreateWindow()
 		                               or Colors.Element
 		Notification.Parent           = ScreenGui
 		Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
-		Instance.new("UIStroke", Notification).Color = Colors.Accent
-		Instance.new("UIStroke", Notification).Thickness = 1
+		local stroke = Instance.new("UIStroke", Notification)
+		stroke.Color = Colors.Accent
+		stroke.Thickness = 1
 
-		-- Icon background
 		local IconBg = Instance.new("Frame")
 		IconBg.Size             = UDim2.new(0, 32, 0, 32)
 		IconBg.Position         = UDim2.new(0, 12, 0.5, -16)
@@ -104,7 +103,6 @@ function Library:CreateWindow()
 		IconBg.Parent           = Notification
 		Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
 
-		-- Icon
 		local Icon = Instance.new("TextLabel")
 		Icon.Size             = UDim2.new(1, 0, 1, 0)
 		Icon.BackgroundTransparency = 1
@@ -117,7 +115,6 @@ function Library:CreateWindow()
 		Icon.TextSize         = 18
 		Icon.Parent           = IconBg
 
-		-- Title
 		local Title = Instance.new("TextLabel")
 		Title.Size                   = UDim2.new(1, -60, 0, 20)
 		Title.Position               = UDim2.new(0, 55, 0, 8)
@@ -132,7 +129,6 @@ function Library:CreateWindow()
 		Title.TextXAlignment         = Enum.TextXAlignment.Left
 		Title.Parent                 = Notification
 
-		-- Message
 		local Message = Instance.new("TextLabel")
 		Message.Size                   = UDim2.new(1, -60, 0, 30)
 		Message.Position               = UDim2.new(0, 55, 0, 28)
@@ -146,20 +142,15 @@ function Library:CreateWindow()
 		Message.TextWrapped           = true
 		Message.Parent                 = Notification
 
-		-- Progress bar
 		local Progress = Instance.new("Frame")
 		Progress.Size             = UDim2.new(1, 0, 0, 2)
 		Progress.Position         = UDim2.new(0, 0, 1, -2)
 		Progress.BackgroundColor3 = Colors.Accent
 		Progress.Parent           = Notification
 
-		-- Slide in animation
 		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-
-		-- Progress bar animation
 		TweenPlay(Progress, { Size = UDim2.new(0, 0, 0, 2) }, Duration, Enum.EasingStyle.Linear)
 
-		-- Auto remove
 		task.delay(Duration, function()
 			if Notification and Notification.Parent then
 				TweenPlay(Notification, { Position = UDim2.new(1, 340, 0, 20) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
@@ -169,151 +160,6 @@ function Library:CreateWindow()
 			end
 		end)
 	end
-
-	-- ── Detached Circular Menu ─────────────────────────────────────
-	local CircleMenu = {
-		Expanded = false,
-		Buttons = {},
-		Dragging = false,
-		DragStart = nil,
-		StartPos = nil,
-		CurrentPos = Vector2.new(100, 100),
-		TargetPos = Vector2.new(100, 100)
-	}
-
-	-- Main circle button
-	local MainCircle = Instance.new("TextButton")
-	MainCircle.Size             = UDim2.new(0, 60, 0, 60)
-	MainCircle.Position         = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
-	MainCircle.BackgroundColor3 = Colors.Accent
-	MainCircle.AnchorPoint      = Vector2.new(0.5, 0.5)
-	MainCircle.Parent           = ScreenGui
-	MainCircle.Text             = ""
-	Instance.new("UICorner", MainCircle).CornerRadius = UDim.new(1, 0)
-
-	-- Main button icon
-	local MainIcon = Instance.new("TextLabel")
-	MainIcon.Size             = UDim2.new(1, 0, 1, 0)
-	MainIcon.BackgroundTransparency = 1
-	MainIcon.Text             = "☰"
-	MainIcon.TextColor3       = Colors.TextActive
-	MainIcon.Font             = Enum.Font.GothamBold
-	MainIcon.TextSize         = 24
-	MainIcon.Parent           = MainCircle
-
-	-- Drag functionality for main circle
-	MainCircle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			CircleMenu.Dragging = true
-			CircleMenu.DragStart = input.Position
-			CircleMenu.StartPos = CircleMenu.CurrentPos
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input)
-		if CircleMenu.Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-			local delta = input.Position - CircleMenu.DragStart
-			CircleMenu.TargetPos = Vector2.new(
-				CircleMenu.StartPos.X + delta.X,
-				CircleMenu.StartPos.Y + delta.Y
-			)
-		end
-	end)
-
-	UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 and CircleMenu.Dragging then
-			CircleMenu.Dragging = false
-		end
-	end)
-
-	-- Smooth drag animation
-	RunService.Heartbeat:Connect(function(dt)
-		if not CircleMenu.Dragging then
-			CircleMenu.CurrentPos = CircleMenu.CurrentPos:Lerp(CircleMenu.TargetPos, 0.15)
-			MainCircle.Position = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
-		else
-			MainCircle.Position = UDim2.new(0, CircleMenu.TargetPos.X, 0, CircleMenu.TargetPos.Y)
-			CircleMenu.CurrentPos = CircleMenu.TargetPos
-		end
-		
-		-- Update button positions when expanded and dragging
-		if CircleMenu.Expanded then
-			for _, buttonData in ipairs(CircleMenu.Buttons) do
-				local targetX = math.cos(buttonData.Angle) * buttonData.Radius
-				local targetY = math.sin(buttonData.Angle) * buttonData.Radius
-				buttonData.Button.Position = UDim2.new(0, CircleMenu.CurrentPos.X + targetX, 0, CircleMenu.CurrentPos.Y + targetY)
-			end
-		end
-	end)
-
-	-- Create expandable buttons
-	local function CreateCircleButton(index, total, text, callback)
-		local angle = (index - 1) * (2 * math.pi / total) - math.pi/2
-		local radius = 80
-		
-		local Button = Instance.new("TextButton")
-		Button.Size             = UDim2.new(0, 50, 0, 50)
-		Button.Position         = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y)
-		Button.BackgroundColor3 = Colors.ElementHover
-		Button.AnchorPoint      = Vector2.new(0.5, 0.5)
-		Button.Visible          = false
-		Button.Text             = ""
-		Button.Parent           = ScreenGui
-		Instance.new("UICorner", Button).CornerRadius = UDim.new(1, 0)
-
-		local Icon = Instance.new("TextLabel")
-		Icon.Size             = UDim2.new(1, 0, 1, 0)
-		Icon.BackgroundTransparency = 1
-		Icon.Text             = text
-		Icon.TextColor3       = Colors.TextActive
-		Icon.Font             = Enum.Font.GothamBold
-		Icon.TextSize         = 16
-		Icon.Parent           = Button
-
-		Button.MouseButton1Click:Connect(callback)
-		table.insert(CircleMenu.Buttons, {Button = Button, Angle = angle, Radius = radius})
-	end
-
-	-- Add some example buttons
-	CreateCircleButton(1, 4, "C", function() Library:Notify("Combat tab", 2, "info") end)
-	CreateCircleButton(2, 4, "M", function() Library:Notify("Movement tab", 2, "info") end)
-	CreateCircleButton(3, 4, "V", function() Library:Notify("Visual tab", 2, "info") end)
-	CreateCircleButton(4, 4, "S", function() Library:Notify("Settings tab", 2, "info") end)
-
-	-- Toggle expand/collapse
-	MainCircle.MouseButton1Click:Connect(function()
-		if not CircleMenu.Dragging then
-			CircleMenu.Expanded = not CircleMenu.Expanded
-			
-			if CircleMenu.Expanded then
-				-- Expand animation
-				for i, buttonData in ipairs(CircleMenu.Buttons) do
-					buttonData.Button.Visible = true
-					local targetX = math.cos(buttonData.Angle) * buttonData.Radius
-					local targetY = math.sin(buttonData.Angle) * buttonData.Radius
-					
-					TweenPlay(buttonData.Button, {
-						Position = UDim2.new(0, CircleMenu.CurrentPos.X + targetX, 0, CircleMenu.CurrentPos.Y + targetY),
-						Size = UDim2.new(0, 50, 0, 50)
-					}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-				end
-				MainIcon.Text = "×"
-			else
-				-- Collapse animation
-				for _, buttonData in ipairs(CircleMenu.Buttons) do
-					TweenPlay(buttonData.Button, {
-						Position = UDim2.new(0, CircleMenu.CurrentPos.X, 0, CircleMenu.CurrentPos.Y),
-						Size = UDim2.new(0, 0, 0, 0)
-					}, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-					
-					task.delay(0.2, function()
-						buttonData.Button.Visible = false
-					end)
-				end
-				MainIcon.Text = "☰"
-			end
-		end
-	end)
 
 	-- ── Main Frame ──────────────────────────────────────────
 	local WindowSize    = UDim2.new(0, 600, 0, 450)
@@ -328,7 +174,7 @@ function Library:CreateWindow()
 	MainFrame.BackgroundTransparency = 0.08
 	MainFrame.AnchorPoint           = Vector2.new(0.5, 0.5)
 	MainFrame.Position              = UDim2.new(0.5, 0, 0.5, 0)
-	MainFrame.Size                  = UDim2.new(0, 0, 0, 0)   -- starts at zero → open anim
+	MainFrame.Size                  = UDim2.new(0, 0, 0, 0)
 	MainFrame.ClipsDescendants      = true
 	MainFrame.Parent                = ScreenGui
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
@@ -348,7 +194,6 @@ function Library:CreateWindow()
 	TitleBar.BackgroundColor3 = Colors.TitleBar
 	TitleBar.Parent           = MainFrame
 
-	-- thin accent line along the bottom edge of the title bar
 	local TitleSep = Instance.new("Frame")
 	TitleSep.Size             = UDim2.new(1, 0, 0, 1)
 	TitleSep.Position         = UDim2.new(0, 0, 1, -1)
@@ -367,7 +212,6 @@ function Library:CreateWindow()
 	TitleLabel.TextXAlignment         = Enum.TextXAlignment.Left
 	TitleLabel.Parent                 = TitleBar
 
-	-- Minimize character (text label)
 	local MinLabel = Instance.new("TextLabel")
 	MinLabel.Size                   = UDim2.new(0, 20, 1, 0)
 	MinLabel.Position               = UDim2.new(1, -70, 0, 0)
@@ -378,7 +222,6 @@ function Library:CreateWindow()
 	MinLabel.Font                   = Enum.Font.GothamBold
 	MinLabel.Parent                 = TitleBar
 
-	-- Minimize click area (invisible button)
 	local MinButton = Instance.new("TextButton")
 	MinButton.Size                   = UDim2.new(0, 30, 1, 0)
 	MinButton.Position               = UDim2.new(1, -75, 0, 0)
@@ -403,7 +246,6 @@ function Library:CreateWindow()
 		TweenPlay(MainFrame, { Size = Minimized and MinimizedSize or WindowSize }, 0.3, Enum.EasingStyle.Quart)
 	end)
 
-	-- Close character (text label)
 	local CloseLabel = Instance.new("TextLabel")
 	CloseLabel.Size                   = UDim2.new(0, 20, 1, 0)
 	CloseLabel.Position               = UDim2.new(1, -35, 0, 0)
@@ -414,7 +256,6 @@ function Library:CreateWindow()
 	CloseLabel.Font                   = Enum.Font.GothamBold
 	CloseLabel.Parent                 = TitleBar
 
-	-- Close click area (invisible button)
 	local CloseButton = Instance.new("TextButton")
 	CloseButton.Size                   = UDim2.new(0, 30, 1, 0)
 	CloseButton.Position               = UDim2.new(1, -40, 0, 0)
@@ -434,7 +275,6 @@ function Library:CreateWindow()
 	)
 
 	CloseButton.MouseButton1Click:Connect(function()
-		-- shrink + fade out simultaneously
 		TweenPlay(MainFrame, {
 			Size                  = UDim2.new(0, 0, 0, 0),
 			BackgroundTransparency = 1
@@ -451,7 +291,6 @@ function Library:CreateWindow()
 	LeftPanel.Size             = UDim2.new(0, 130, 1, -35)
 	LeftPanel.Parent           = MainFrame
 
-	-- vertical separator between panel and content
 	local PanelSep = Instance.new("Frame")
 	PanelSep.Size             = UDim2.new(0, 1, 1, 0)
 	PanelSep.Position         = UDim2.new(1, -1, 0, 0)
@@ -464,6 +303,7 @@ function Library:CreateWindow()
 	TabContainer.BackgroundTransparency = 1
 	TabContainer.ScrollBarThickness     = 0
 	TabContainer.AutomaticCanvasSize    = Enum.AutomaticSize.Y
+	TabContainer.BorderSizePixel        = 0
 	TabContainer.Parent                 = LeftPanel
 
 	local TabList = Instance.new("UIListLayout", TabContainer)
@@ -584,8 +424,6 @@ function Library:CreateWindow()
 	local AllTabs     = {}
 	local ActiveIndex = nil
 
-	-- stagger-animates every child element inside a page
-	-- each element fades in with a small delay between them
 	local function AnimatePageIn(page)
 		local children = {}
 		for _, child in ipairs(page:GetChildren()) do
@@ -598,7 +436,6 @@ function Library:CreateWindow()
 		end
 
 		for i, child in ipairs(children) do
-			-- hide element + all its text labels instantly
 			child.Visible = false
 			child.BackgroundTransparency = 1
 			for _, sub in ipairs(child:GetDescendants()) do
@@ -611,10 +448,8 @@ function Library:CreateWindow()
 				if not child or not child.Parent then return end
 				child.Visible = true
 
-				-- fade bg in
 				TweenPlay(child, { BackgroundTransparency = 0 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
-				-- fade all text children in (slightly delayed for layered feel)
 				task.delay(0.04, function()
 					for _, sub in ipairs(child:GetDescendants()) do
 						if sub:IsA("TextLabel") or sub:IsA("TextButton") then
@@ -628,25 +463,20 @@ function Library:CreateWindow()
 
 	local function ActivateTab(index)
 		if ActiveIndex == index then return end
-		-- deactivate all
 		for _, t in ipairs(AllTabs) do
 			t.page.Visible = false
 			t.button.TextColor3       = Colors.TextDim
 			t.button.BackgroundColor3 = Colors.Element
-			-- shrink accent bar height to 0
 			TweenPlay(t.accent, { Size = UDim2.new(0, 3, 0, 0) }, 0.15, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 		end
-		-- activate chosen
 		local t = AllTabs[index]
 		t.page.Visible            = true
 		t.button.TextColor3       = Colors.TextActive
 		t.button.BackgroundColor3 = Colors.ElementHover
-		-- grow accent bar from 0 → full height
 		t.accent.Size = UDim2.new(0, 3, 0, 0)
 		TweenPlay(t.accent, { Size = UDim2.new(0, 3, 1, -12) }, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		ActiveIndex = index
 
-		-- stagger the page elements in
 		AnimatePageIn(t.page)
 	end
 
@@ -661,16 +491,14 @@ function Library:CreateWindow()
 		TabButton.Parent           = TabContainer
 		Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 6)
 
-		-- Accent bar (animates height on switch)
 		local AccentBar = Instance.new("Frame")
-		AccentBar.Size                   = UDim2.new(0, 3, 0, 0)   -- starts collapsed
+		AccentBar.Size                   = UDim2.new(0, 3, 0, 0)
 		AccentBar.Position               = UDim2.new(0, 4, 0.5, 0)
 		AccentBar.AnchorPoint            = Vector2.new(0, 0.5)
 		AccentBar.BackgroundColor3       = Colors.Accent
 		AccentBar.Parent                 = TabButton
 		Instance.new("UICorner", AccentBar).CornerRadius = UDim.new(0, 2)
 
-		-- Page
 		local Page = Instance.new("ScrollingFrame")
 		Page.Size                   = UDim2.new(1, 0, 1, 0)
 		Page.BackgroundTransparency = 1
@@ -681,6 +509,7 @@ function Library:CreateWindow()
 		Page.AutomaticCanvasSize    = Enum.AutomaticSize.Y
 		Page.ElasticBehavior        = true
 		Page.ScrollingDirection     = Enum.ScrollingDirection.Y
+		Page.BorderSizePixel        = 0
 		Page.Parent                 = ContentContainer
 
 		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
@@ -688,7 +517,6 @@ function Library:CreateWindow()
 		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 8)
 		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 8)
 
-		-- Register
 		table.insert(AllTabs, { button = TabButton, accent = AccentBar, page = Page })
 		local myIndex = #AllTabs
 
@@ -701,7 +529,6 @@ function Library:CreateWindow()
 			ActivateTab(myIndex)
 		end)
 
-		-- auto-select first tab
 		if #AllTabs == 1 then
 			task.delay(0, function() ActivateTab(1) end)
 		end
@@ -709,7 +536,6 @@ function Library:CreateWindow()
 		-- ── Elements ────────────────────────────────────────
 		local Elements = {}
 
-		-- ── ripple helper ───────────────────────────────────
 		local function SpawnRipple(parent)
 			local mouse = UserInputService:GetMouseLocation()
 			local relX  = mouse.X - parent.AbsolutePosition.X
@@ -1003,7 +829,9 @@ function Library:CreateWindow()
 			OptionsContainer.ZIndex           = 10
 			OptionsContainer.Parent           = DropdownFrame
 			Instance.new("UICorner", OptionsContainer).CornerRadius = UDim.new(0, 6)
-			Instance.new("UIStroke", OptionsContainer).Color = Colors.Accent
+			local stroke = Instance.new("UIStroke", OptionsContainer)
+			stroke.Color = Colors.Accent
+			stroke.Thickness = 1
 
 			local OptionsList = Instance.new("UIListLayout", OptionsContainer)
 			OptionsList.Padding = UDim.new(0, 2)
@@ -1118,6 +946,10 @@ function Library:CreateWindow()
 	task.defer(function()
 		TweenPlay(MainFrame, { Size = WindowSize }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		MainFrame.BackgroundTransparency = 0.08
+		
+		-- Show welcome notification after window opens
+		task.wait(0.5)
+		Library:Notify("Meru Hub loaded successfully!", 3, "success")
 	end)
 
 	return Tabs
