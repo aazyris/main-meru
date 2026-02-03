@@ -15,8 +15,13 @@ local Colors = {
 	Text          = Color3.fromRGB(240, 240, 240),
 	TextDim       = Color3.fromRGB(140, 140, 140),
 	TextActive    = Color3.fromRGB(255, 255, 255),
-	Accent        = Color3.fromRGB(80, 80, 80),
+	Accent        = Color3.fromRGB(100, 100, 100),
+	AccentLight   = Color3.fromRGB(120, 120, 120),
 	Ripple        = Color3.fromRGB(100, 100, 100),
+	Success       = Color3.fromRGB(60, 180, 60),
+	Warning       = Color3.fromRGB(220, 160, 40),
+	Error         = Color3.fromRGB(220, 60, 60),
+	Info          = Color3.fromRGB(80, 140, 220),
 }
 
 -- ── Helpers ─────────────────────────────────────────────────
@@ -75,34 +80,55 @@ function Library:CreateWindow()
 		end
 	end)
 
-	-- ── Notification System ─────────────────────────────────
+	-- ── Notification System (THEMED) ─────────────────────────────────
 	function Library:Notify(Text, Duration, Type)
 		Duration = Duration or 3
 		Type = Type or "info"
 		
+		local typeColors = {
+			success = {bg = Colors.Element, accent = Colors.Success},
+			warning = {bg = Colors.Element, accent = Colors.Warning},
+			error = {bg = Colors.Element, accent = Colors.Error},
+			info = {bg = Colors.Element, accent = Colors.Info}
+		}
+		
+		local theme = typeColors[Type] or typeColors.info
+		
 		local Notification = Instance.new("Frame")
 		Notification.Size             = UDim2.new(0, 320, 0, 70)
 		Notification.Position         = UDim2.new(1, 340, 0, 20)
-		Notification.BackgroundColor3 = Type == "success" and Color3.fromRGB(40, 120, 40) 
-		                               or Type == "warning" and Color3.fromRGB(180, 120, 0)
-		                               or Type == "error" and Color3.fromRGB(180, 40, 40)
-		                               or Colors.Element
+		Notification.BackgroundColor3 = theme.bg
 		Notification.Parent           = ScreenGui
 		Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
+		
 		local stroke = Instance.new("UIStroke", Notification)
 		stroke.Color = Colors.Accent
 		stroke.Thickness = 1
+		stroke.Transparency = 0.3
 
+		-- Left accent bar
+		local AccentBar = Instance.new("Frame")
+		AccentBar.Size             = UDim2.new(0, 4, 1, 0)
+		AccentBar.Position         = UDim2.new(0, 0, 0, 0)
+		AccentBar.BackgroundColor3 = theme.accent
+		AccentBar.BorderSizePixel  = 0
+		AccentBar.Parent           = Notification
+		local corner = Instance.new("UICorner", AccentBar)
+		corner.CornerRadius = UDim.new(0, 8)
+
+		-- Icon background
 		local IconBg = Instance.new("Frame")
-		IconBg.Size             = UDim2.new(0, 32, 0, 32)
-		IconBg.Position         = UDim2.new(0, 12, 0.5, -16)
-		IconBg.BackgroundColor3 = Type == "success" and Color3.fromRGB(60, 140, 60)
-		                         or Type == "warning" and Color3.fromRGB(200, 140, 20)
-		                         or Type == "error" and Color3.fromRGB(200, 60, 60)
-		                         or Colors.Accent
+		IconBg.Size             = UDim2.new(0, 36, 0, 36)
+		IconBg.Position         = UDim2.new(0, 14, 0.5, -18)
+		IconBg.BackgroundColor3 = Colors.Panel
 		IconBg.Parent           = Notification
 		Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
+		
+		local iconStroke = Instance.new("UIStroke", IconBg)
+		iconStroke.Color = theme.accent
+		iconStroke.Thickness = 2
 
+		-- Icon
 		local Icon = Instance.new("TextLabel")
 		Icon.Size             = UDim2.new(1, 0, 1, 0)
 		Icon.BackgroundTransparency = 1
@@ -110,14 +136,15 @@ function Library:CreateWindow()
 		                     or Type == "warning" and "!"
 		                     or Type == "error" and "×"
 		                     or "i"
-		Icon.TextColor3       = Colors.TextActive
+		Icon.TextColor3       = theme.accent
 		Icon.Font             = Enum.Font.GothamBold
-		Icon.TextSize         = 18
+		Icon.TextSize         = 20
 		Icon.Parent           = IconBg
 
+		-- Title
 		local Title = Instance.new("TextLabel")
-		Title.Size                   = UDim2.new(1, -60, 0, 20)
-		Title.Position               = UDim2.new(0, 55, 0, 8)
+		Title.Size                   = UDim2.new(1, -70, 0, 20)
+		Title.Position               = UDim2.new(0, 60, 0, 12)
 		Title.BackgroundTransparency = 1
 		Title.Text                   = Type == "success" and "Success"
 		                         or Type == "warning" and "Warning"
@@ -129,12 +156,13 @@ function Library:CreateWindow()
 		Title.TextXAlignment         = Enum.TextXAlignment.Left
 		Title.Parent                 = Notification
 
+		-- Message
 		local Message = Instance.new("TextLabel")
-		Message.Size                   = UDim2.new(1, -60, 0, 30)
-		Message.Position               = UDim2.new(0, 55, 0, 28)
+		Message.Size                   = UDim2.new(1, -70, 0, 30)
+		Message.Position               = UDim2.new(0, 60, 0, 32)
 		Message.BackgroundTransparency = 1
 		Message.Text                   = Text
-		Message.TextColor3             = Colors.Text
+		Message.TextColor3             = Colors.TextDim
 		Message.Font                   = Enum.Font.Gotham
 		Message.TextSize               = 12
 		Message.TextXAlignment         = Enum.TextXAlignment.Left
@@ -142,15 +170,45 @@ function Library:CreateWindow()
 		Message.TextWrapped           = true
 		Message.Parent                 = Notification
 
+		-- Progress bar (bottom)
+		local ProgressBg = Instance.new("Frame")
+		ProgressBg.Size             = UDim2.new(1, -8, 0, 3)
+		ProgressBg.Position         = UDim2.new(0, 4, 1, -6)
+		ProgressBg.BackgroundColor3 = Colors.Panel
+		ProgressBg.BorderSizePixel  = 0
+		ProgressBg.Parent           = Notification
+		Instance.new("UICorner", ProgressBg).CornerRadius = UDim.new(1, 0)
+		
 		local Progress = Instance.new("Frame")
-		Progress.Size             = UDim2.new(1, 0, 0, 2)
-		Progress.Position         = UDim2.new(0, 0, 1, -2)
-		Progress.BackgroundColor3 = Colors.Accent
-		Progress.Parent           = Notification
+		Progress.Size             = UDim2.new(1, 0, 1, 0)
+		Progress.BackgroundColor3 = theme.accent
+		Progress.BorderSizePixel  = 0
+		Progress.Parent           = ProgressBg
+		Instance.new("UICorner", Progress).CornerRadius = UDim.new(1, 0)
 
-		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-		TweenPlay(Progress, { Size = UDim2.new(0, 0, 0, 2) }, Duration, Enum.EasingStyle.Linear)
+		-- Animations
+		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		TweenPlay(Progress, { Size = UDim2.new(0, 0, 1, 0) }, Duration, Enum.EasingStyle.Linear)
 
+		-- Close button
+		local CloseBtn = Instance.new("TextButton")
+		CloseBtn.Size = UDim2.new(0, 20, 0, 20)
+		CloseBtn.Position = UDim2.new(1, -24, 0, 6)
+		CloseBtn.BackgroundTransparency = 1
+		CloseBtn.Text = "×"
+		CloseBtn.TextColor3 = Colors.TextDim
+		CloseBtn.TextSize = 18
+		CloseBtn.Font = Enum.Font.GothamBold
+		CloseBtn.Parent = Notification
+		
+		CloseBtn.MouseButton1Click:Connect(function()
+			TweenPlay(Notification, { Position = UDim2.new(1, 340, 0, 20) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+			task.delay(0.35, function()
+				if Notification and Notification.Parent then Notification:Destroy() end
+			end)
+		end)
+
+		-- Auto remove
 		task.delay(Duration, function()
 			if Notification and Notification.Parent then
 				TweenPlay(Notification, { Position = UDim2.new(1, 340, 0, 20) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
@@ -530,7 +588,7 @@ function Library:CreateWindow()
 		end)
 
 		if #AllTabs == 1 then
-			task.delay(0, function() ActivateTab(1) end)
+			task.delay(0.1, function() ActivateTab(1) end)
 		end
 
 		-- ── Elements ────────────────────────────────────────
@@ -589,6 +647,8 @@ function Library:CreateWindow()
 				Button.BackgroundColor3 = Colors.ElementHover
 				if Callback then Callback() end
 			end)
+			
+			return Button
 		end
 
 		function Elements:CreateSlider(Text, Min, Max, Callback, Default)
@@ -617,7 +677,7 @@ function Library:CreateWindow()
 			ValueLabel.Position               = UDim2.new(1, -48, 0, 6)
 			ValueLabel.BackgroundTransparency = 1
 			ValueLabel.Text                   = tostring(Value)
-			ValueLabel.TextColor3             = Colors.Accent
+			ValueLabel.TextColor3             = Colors.AccentLight
 			ValueLabel.Font                   = Enum.Font.GothamBold
 			ValueLabel.TextSize               = 12
 			ValueLabel.TextXAlignment         = Enum.TextXAlignment.Right
@@ -694,6 +754,8 @@ function Library:CreateWindow()
 					sDragging = false
 				end
 			end)
+			
+			return SliderFrame
 		end
 
 		function Elements:CreateToggle(Text, Callback, Default)
@@ -744,6 +806,8 @@ function Library:CreateWindow()
 			end
 
 			ToggleFrame.MouseButton1Click:Connect(UpdateToggle)
+			
+			return ToggleFrame
 		end
 
 		function Elements:CreateTextbox(Text, Placeholder, Callback)
@@ -786,6 +850,8 @@ function Library:CreateWindow()
 			Textbox.FocusLost:Connect(function()
 				if Callback then Callback(Textbox.Text) end
 			end)
+			
+			return TextboxFrame
 		end
 
 		function Elements:CreateDropdown(Text, Options, Callback)
@@ -879,6 +945,8 @@ function Library:CreateWindow()
 				OptionsContainer.Visible = Open
 				Arrow.Text = Open and "▲" or "▼"
 			end)
+			
+			return DropdownFrame
 		end
 
 		function Elements:CreateColorPicker(Text, Callback, Default)
@@ -937,6 +1005,8 @@ function Library:CreateWindow()
 				Preview.BackgroundColor3 = SelectedColor
 				if Callback then Callback(SelectedColor) end
 			end)
+			
+			return ColorFrame
 		end
 
 		return Elements
@@ -947,7 +1017,6 @@ function Library:CreateWindow()
 		TweenPlay(MainFrame, { Size = WindowSize }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		MainFrame.BackgroundTransparency = 0.08
 		
-		-- Show welcome notification after window opens
 		task.wait(0.5)
 		Library:Notify("Meru Hub loaded successfully!", 3, "success")
 	end)
