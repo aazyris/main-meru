@@ -34,6 +34,65 @@ local function TweenPlay(instance, props, duration, style, direction)
 	return t
 end
 
+-- ── Notification System ─────────────────────────────────────
+local Notifications = {}
+local NotificationQueue = {}
+
+function Library:Notify(Text, Duration, Type)
+	Duration = Duration or 3
+	Type = Type or "info" -- info, success, warning, error
+	
+	local Notification = Instance.new("Frame")
+	Notification.Size             = UDim2.new(0, 300, 0, 60)
+	Notification.Position         = UDim2.new(1, 320, 1, -80)
+	Notification.BackgroundColor3 = Type == "success" and Color3.fromRGB(40, 120, 40) 
+	                               or Type == "warning" and Color3.fromRGB(180, 120, 0)
+	                               or Type == "error" and Color3.fromRGB(180, 40, 40)
+	                               or Colors.Element
+	Notification.Parent           = ScreenGui
+	Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
+
+	-- Icon
+	local Icon = Instance.new("TextLabel")
+	Icon.Size             = UDim2.new(0, 24, 0, 24)
+	Icon.Position         = UDim2.new(0, 12, 0, 18)
+	Icon.BackgroundTransparency = 1
+	Icon.Text             = Type == "success" and "✓" 
+	                     or Type == "warning" and "!"
+	                     or Type == "error" and "×"
+	                     or "i"
+	Icon.TextColor3       = Colors.TextActive
+	Icon.Font             = Enum.Font.GothamBold
+	Icon.TextSize         = 16
+	Icon.Parent           = Notification
+
+	-- Message
+	local Message = Instance.new("TextLabel")
+	Message.Size                   = UDim2.new(1, -50, 1, 0)
+	Message.Position               = UDim2.new(0, 45, 0, 0)
+	Message.BackgroundTransparency = 1
+	Message.Text                   = Text
+	Message.TextColor3             = Colors.Text
+	Message.Font                   = Enum.Font.Gotham
+	Message.TextSize               = 13
+	Message.TextXAlignment         = Enum.TextXAlignment.Left
+	Message.TextYAlignment         = Enum.TextYAlignment.Center
+	Message.Parent                 = Notification
+
+	-- Slide in animation
+	TweenPlay(Notification, { Position = UDim2.new(1, -320, 1, -80) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
+	-- Auto remove
+	task.delay(Duration, function()
+		if Notification and Notification.Parent then
+			TweenPlay(Notification, { Position = UDim2.new(1, 320, 1, -80) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+			task.delay(0.35, function()
+				if Notification and Notification.Parent then Notification:Destroy() end
+			end)
+		end
+	end)
+end
+
 function Library:CreateWindow()
 	local Name = "Meru"
 
@@ -564,6 +623,262 @@ function Library:CreateWindow()
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					sDragging = false
 				end
+			end)
+		end
+
+		function Elements:CreateToggle(Text, Callback, Default)
+			local Toggled = Default or false
+			
+			local ToggleFrame = Instance.new("Frame")
+			ToggleFrame.Size             = UDim2.new(1, -16, 0, 36)
+			ToggleFrame.BackgroundColor3 = Colors.Element
+			ToggleFrame.ClipsDescendants = true
+			ToggleFrame.Parent           = Page
+			Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 6)
+
+			-- Label
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(1, -60, 1, 0)
+			Label.Position               = UDim2.new(0, 14, 0, 0)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.Gotham
+			Label.TextSize               = 13
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = ToggleFrame
+
+			-- Toggle Switch
+			local Switch = Instance.new("Frame")
+			Switch.Size             = UDim2.new(0, 44, 0, 22)
+			Switch.Position         = UDim2.new(1, -50, 0.5, -11)
+			Switch.BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70)
+			Switch.Parent           = ToggleFrame
+			Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 11)
+
+			-- Switch Knob
+			local Knob = Instance.new("Frame")
+			Knob.Size             = UDim2.new(0, 18, 0, 18)
+			Knob.Position         = UDim2.new(0, Toggled and 24 or 2, 0, 2)
+			Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+			Knob.Parent           = Switch
+			Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+
+			RegisterHover(ToggleFrame,
+				function() ToggleFrame.BackgroundColor3 = Colors.ElementHover end,
+				function() ToggleFrame.BackgroundColor3 = Colors.Element    end
+			)
+
+			local function UpdateToggle()
+				Toggled = not Toggled
+				TweenPlay(Switch, { BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70) }, 0.2, Enum.EasingStyle.Quart)
+				TweenPlay(Knob, { Position = UDim2.new(0, Toggled and 24 or 2, 0, 2) }, 0.2, Enum.EasingStyle.Back)
+				if Callback then Callback(Toggled) end
+			end
+
+			ToggleFrame.MouseButton1Click:Connect(UpdateToggle)
+			Switch.MouseButton1Click:Connect(UpdateToggle)
+			Knob.MouseButton1Click:Connect(UpdateToggle)
+		end
+
+		function Elements:CreateTextbox(Text, Placeholder, Callback)
+			local TextboxFrame = Instance.new("Frame")
+			TextboxFrame.Size             = UDim2.new(1, -16, 0, 52)
+			TextboxFrame.BackgroundColor3 = Colors.Element
+			TextboxFrame.ClipsDescendants = true
+			TextboxFrame.Parent           = Page
+			Instance.new("UICorner", TextboxFrame).CornerRadius = UDim.new(0, 6)
+
+			-- Label
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(1, -16, 0, 20)
+			Label.Position               = UDim2.new(0, 12, 0, 6)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.Gotham
+			Label.TextSize               = 12
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = TextboxFrame
+
+			-- Textbox
+			local Textbox = Instance.new("TextBox")
+			Textbox.Size             = UDim2.new(1, -24, 0, 20)
+			Textbox.Position         = UDim2.new(0, 12, 0, 28)
+			Textbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			Textbox.Text              = ""
+			Textbox.PlaceholderText   = Placeholder or ""
+			Textbox.TextColor3        = Colors.Text
+			Textbox.PlaceholderColor3 = Colors.TextDim
+			Textbox.Font              = Enum.Font.Gotham
+			Textbox.TextSize          = 12
+			Textbox.Parent            = TextboxFrame
+			Instance.new("UICorner", Textbox).CornerRadius = UDim.new(0, 4)
+
+			RegisterHover(Textbox,
+				function() Textbox.BackgroundColor3 = Color3.fromRGB(50, 50, 60) end,
+				function() Textbox.BackgroundColor3 = Color3.fromRGB(40, 40, 50) end
+			)
+
+			Textbox.FocusLost:Connect(function()
+				if Callback then Callback(Textbox.Text) end
+			end)
+		end
+
+		function Elements:CreateDropdown(Text, Options, Callback)
+			local Selected = nil
+			local Open = false
+			
+			local DropdownFrame = Instance.new("Frame")
+			DropdownFrame.Size             = UDim2.new(1, -16, 0, 36)
+			DropdownFrame.BackgroundColor3 = Colors.Element
+			DropdownFrame.ClipsDescendants = true
+			DropdownFrame.Parent           = Page
+			Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 6)
+
+			-- Label
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(1, -40, 1, 0)
+			Label.Position               = UDim2.new(0, 14, 0, 0)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.Gotham
+			Label.TextSize               = 13
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = DropdownFrame
+
+			-- Dropdown Arrow
+			local Arrow = Instance.new("TextLabel")
+			Arrow.Size             = UDim2.new(0, 20, 1, 0)
+			Arrow.Position         = UDim2.new(1, -20, 0, 0)
+			Arrow.BackgroundTransparency = 1
+			Arrow.Text             = "▼"
+			Arrow.TextColor3       = Colors.TextDim
+			Arrow.Font             = Enum.Font.Gotham
+			Arrow.TextSize         = 10
+			Arrow.Parent           = DropdownFrame
+
+			-- Options Container
+			local OptionsContainer = Instance.new("Frame")
+			OptionsContainer.Size             = UDim2.new(1, -16, 0, 0)
+			OptionsContainer.Position         = UDim2.new(0, 0, 1, 0)
+			OptionsContainer.BackgroundColor3 = Colors.Element
+			OptionsContainer.Visible          = false
+			OptionsContainer.Parent           = Page
+			Instance.new("UICorner", OptionsContainer).CornerRadius = UDim.new(0, 6)
+
+			local OptionsList = Instance.new("UIListLayout", OptionsContainer)
+			OptionsList.Padding = UDim.new(0, 2)
+
+			-- Create option buttons
+			for i, option in ipairs(Options) do
+				local OptionButton = Instance.new("TextButton")
+				OptionButton.Size             = UDim2.new(1, -8, 0, 28)
+				OptionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+				OptionButton.Text             = option
+				OptionButton.TextColor3       = Colors.Text
+				OptionButton.Font             = Enum.Font.Gotham
+				OptionButton.TextSize         = 12
+				OptionButton.Parent           = OptionsContainer
+				Instance.new("UICorner", OptionButton).CornerRadius = UDim.new(0, 4)
+
+				OptionButton.MouseButton1Click:Connect(function()
+					Selected = option
+					Label.Text = Text .. ": " .. option
+					Open = false
+					OptionsContainer.Visible = false
+					Arrow.Text = "▼"
+					TweenPlay(DropdownFrame, { Size = UDim2.new(1, -16, 0, 36) }, 0.2, Enum.EasingStyle.Quart)
+					if Callback then Callback(option) end
+				end)
+
+				RegisterHover(OptionButton,
+					function() OptionButton.BackgroundColor3 = Colors.ElementHover end,
+					function() OptionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50) end
+				)
+			end
+
+			-- Update container size
+			OptionsContainer.AutomaticSize = Enum.AutomaticSize.Y
+
+			RegisterHover(DropdownFrame,
+				function() DropdownFrame.BackgroundColor3 = Colors.ElementHover end,
+				function() DropdownFrame.BackgroundColor3 = Colors.Element    end
+			)
+
+			DropdownFrame.MouseButton1Click:Connect(function()
+				Open = not Open
+				OptionsContainer.Visible = Open
+				Arrow.Text = Open and "▲" or "▼"
+				
+				if Open then
+					TweenPlay(DropdownFrame, { Size = UDim2.new(1, -16, 0, 36 + OptionsContainer.AbsoluteSize.Y) }, 0.2, Enum.EasingStyle.Quart)
+				else
+					TweenPlay(DropdownFrame, { Size = UDim2.new(1, -16, 0, 36) }, 0.2, Enum.EasingStyle.Quart)
+				end
+			end)
+		end
+
+		function Elements:CreateColorPicker(Text, Callback, Default)
+			local SelectedColor = Default or Color3.fromRGB(255, 255, 255)
+			
+			local ColorFrame = Instance.new("Frame")
+			ColorFrame.Size             = UDim2.new(1, -16, 0, 52)
+			ColorFrame.BackgroundColor3 = Colors.Element
+			ColorFrame.ClipsDescendants = true
+			ColorFrame.Parent           = Page
+			Instance.new("UICorner", ColorFrame).CornerRadius = UDim.new(0, 6)
+
+			-- Label
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(1, -60, 0, 20)
+			Label.Position               = UDim2.new(0, 12, 0, 6)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.Gotham
+			Label.TextSize               = 12
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = ColorFrame
+
+			-- Color Display
+			local ColorDisplay = Instance.new("Frame")
+			ColorDisplay.Size             = UDim2.new(0, 44, 0, 22)
+			ColorDisplay.Position         = UDim2.new(1, -50, 0, 6)
+			ColorDisplay.BackgroundColor3 = SelectedColor
+			ColorDisplay.Parent           = ColorFrame
+			Instance.new("UICorner", ColorDisplay).CornerRadius = UDim.new(0, 4)
+
+			-- Color Preview
+			local Preview = Instance.new("Frame")
+			Preview.Size             = UDim2.new(1, -24, 0, 20)
+			Preview.Position         = UDim2.new(0, 12, 0, 28)
+			Preview.BackgroundColor3 = SelectedColor
+			Preview.Parent           = ColorFrame
+			Instance.new("UICorner", Preview).CornerRadius = UDim.new(0, 4)
+
+			RegisterHover(ColorFrame,
+				function() ColorFrame.BackgroundColor3 = Colors.ElementHover end,
+				function() ColorFrame.BackgroundColor3 = Colors.Element    end
+			)
+
+			ColorFrame.MouseButton1Click:Connect(function()
+				-- Simple color picker with preset colors
+				local colors = {
+					Color3.fromRGB(255, 0, 0),
+					Color3.fromRGB(0, 255, 0),
+					Color3.fromRGB(0, 0, 255),
+					Color3.fromRGB(255, 255, 0),
+					Color3.fromRGB(255, 0, 255),
+					Color3.fromRGB(0, 255, 255),
+					Color3.fromRGB(255, 255, 255),
+					Color3.fromRGB(0, 0, 0)
+				}
+				SelectedColor = colors[math.random(#colors)]
+				ColorDisplay.BackgroundColor3 = SelectedColor
+				Preview.BackgroundColor3 = SelectedColor
+				if Callback then Callback(SelectedColor) end
 			end)
 		end
 
