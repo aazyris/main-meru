@@ -1,8 +1,10 @@
 local Library = {}
-local TweenService = game:GetService("TweenService")
+local TweenService    = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local CoreGui = game:GetService("CoreGui")
+local RunService      = game:GetService("RunService")
+local CoreGui         = game:GetService("CoreGui")
 
+-- ── Palette ─────────────────────────────────────────────────
 local Colors = {
 	BG            = Color3.fromRGB(18, 18, 22),
 	Panel         = Color3.fromRGB(26, 26, 32),
@@ -14,27 +16,33 @@ local Colors = {
 	TextDim       = Color3.fromRGB(130, 130, 140),
 	TextActive    = Color3.fromRGB(255, 255, 255),
 	Accent        = Color3.fromRGB(90, 160, 255),
+	Ripple        = Color3.fromRGB(90, 160, 255),
 }
 
+-- ── Helpers ─────────────────────────────────────────────────
 local function Tween(instance, props, duration, style, direction)
 	duration  = duration  or 0.18
 	style     = style     or Enum.EasingStyle.Quart
 	direction = direction or Enum.EasingDirection.Out
-	TweenService:Create(instance, TweenInfo.new(duration, style, direction), props):Play()
+	return TweenService:Create(instance, TweenInfo.new(duration, style, direction), props)
+end
+
+-- plays and returns the tween (so caller can :Wait() if needed)
+local function TweenPlay(instance, props, duration, style, direction)
+	local t = Tween(instance, props, duration, style, direction)
+	t:Play()
+	return t
 end
 
 function Library:CreateWindow()
 	local Name = "Meru"
 
-	-- Kill any previous instance cleanly
+	-- kill previous
 	local prev = CoreGui:FindFirstChild(Name .. "_Hub")
 	if prev then prev:Destroy() end
 
-	-- ── Hover system (CoreGui-safe) ─────────────────────────
-	-- CoreGui doesn't fire MouseEntered/MouseLeaving.
-	-- Instead we poll mouse position on every InputChanged and
-	-- check which registered GuiObject the mouse is over.
-	local HoverTargets = {}   -- { instance, onEnter, onLeave, inside }
+	-- ── Hover poller (CoreGui-safe) ─────────────────────────
+	local HoverTargets = {}
 
 	local function RegisterHover(guiObj, onEnter, onLeave)
 		table.insert(HoverTargets, { instance = guiObj, onEnter = onEnter, onLeave = onLeave, inside = false })
@@ -48,23 +56,21 @@ function Library:CreateWindow()
 			and pos.Y >= abs.Y and pos.Y <= abs.Y + sz.Y
 	end
 
-	-- Single shared connection — fires for every mouse move
 	UserInputService.InputChanged:Connect(function(input)
 		if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
 		for _, h in ipairs(HoverTargets) do
 			if h.instance and h.instance.Parent then
 				local over = IsMouseOver(h.instance)
 				if over and not h.inside then
-					h.inside = true
-					h.onEnter()
+					h.inside = true;  h.onEnter()
 				elseif not over and h.inside then
-					h.inside = false
-					h.onLeave()
+					h.inside = false; h.onLeave()
 				end
 			end
 		end
 	end)
 
+	-- ── ScreenGui ───────────────────────────────────────────
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name         = Name .. "_Hub"
 	ScreenGui.ResetOnSpawn = false
@@ -80,7 +86,7 @@ function Library:CreateWindow()
 	MainFrame.BackgroundTransparency = 0.08
 	MainFrame.AnchorPoint           = Vector2.new(0.5, 0.5)
 	MainFrame.Position              = UDim2.new(0.5, 0, 0.5, 0)
-	MainFrame.Size                  = WindowSize
+	MainFrame.Size                  = UDim2.new(0, 0, 0, 0)   -- starts at zero → open anim
 	MainFrame.ClipsDescendants      = true
 	MainFrame.Parent                = ScreenGui
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
@@ -90,6 +96,14 @@ function Library:CreateWindow()
 	TitleBar.Size             = UDim2.new(1, 0, 0, 35)
 	TitleBar.BackgroundColor3 = Colors.TitleBar
 	TitleBar.Parent           = MainFrame
+
+	-- thin accent line along the bottom edge of the title bar
+	local TitleSep = Instance.new("Frame")
+	TitleSep.Size             = UDim2.new(1, 0, 0, 1)
+	TitleSep.Position         = UDim2.new(0, 0, 1, -1)
+	TitleSep.BackgroundColor3 = Colors.Accent
+	TitleSep.BackgroundTransparency = 0.55
+	TitleSep.Parent           = TitleBar
 
 	local TitleLabel = Instance.new("TextLabel")
 	TitleLabel.Size                   = UDim2.new(1, -80, 1, 0)
@@ -113,7 +127,6 @@ function Library:CreateWindow()
 	MinButton.Font                   = Enum.Font.Gotham
 	MinButton.Parent                 = TitleBar
 
-	-- Hover via poller
 	RegisterHover(MinButton,
 		function() MinButton.TextColor3 = Colors.TextActive end,
 		function() MinButton.TextColor3 = Colors.TextDim end
@@ -121,7 +134,8 @@ function Library:CreateWindow()
 
 	MinButton.MouseButton1Click:Connect(function()
 		Minimized = not Minimized
-		Tween(MainFrame, { Size = Minimized and MinimizedSize or WindowSize }, 0.3, Enum.EasingStyle.Quart)
+		MinButton.Text = Minimized and "⬆" or "─"
+		TweenPlay(MainFrame, { Size = Minimized and MinimizedSize or WindowSize }, 0.3, Enum.EasingStyle.Quart)
 	end)
 
 	-- Close button
@@ -135,18 +149,19 @@ function Library:CreateWindow()
 	CloseButton.Font                   = Enum.Font.Gotham
 	CloseButton.Parent                 = TitleBar
 
-	-- Hover via poller
 	RegisterHover(CloseButton,
 		function() CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100) end,
 		function() CloseButton.TextColor3 = Colors.TextDim end
 	)
 
 	CloseButton.MouseButton1Click:Connect(function()
-		Tween(MainFrame, { Size = UDim2.new(0, 0, 0, 0) }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+		-- shrink + fade out simultaneously
+		TweenPlay(MainFrame, {
+			Size                  = UDim2.new(0, 0, 0, 0),
+			BackgroundTransparency = 1
+		}, 0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 		task.delay(0.25, function()
-			if ScreenGui and ScreenGui.Parent then
-				ScreenGui:Destroy()
-			end
+			if ScreenGui and ScreenGui.Parent then ScreenGui:Destroy() end
 		end)
 	end)
 
@@ -157,6 +172,14 @@ function Library:CreateWindow()
 	LeftPanel.Size             = UDim2.new(0, 130, 1, -35)
 	LeftPanel.Parent           = MainFrame
 
+	-- vertical separator between panel and content
+	local PanelSep = Instance.new("Frame")
+	PanelSep.Size             = UDim2.new(0, 1, 1, 0)
+	PanelSep.Position         = UDim2.new(1, -1, 0, 0)
+	PanelSep.BackgroundColor3 = Colors.Accent
+	PanelSep.BackgroundTransparency = 0.7
+	PanelSep.Parent           = LeftPanel
+
 	local TabContainer = Instance.new("ScrollingFrame")
 	TabContainer.Size                   = UDim2.new(1, 0, 1, 0)
 	TabContainer.BackgroundTransparency = 1
@@ -164,11 +187,9 @@ function Library:CreateWindow()
 	TabContainer.AutomaticCanvasSize    = Enum.AutomaticSize.Y
 	TabContainer.Parent                 = LeftPanel
 
-	local TabList = Instance.new("UIListLayout")
+	local TabList = Instance.new("UIListLayout", TabContainer)
 	TabList.Padding             = UDim.new(0, 4)
 	TabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	TabList.Parent              = TabContainer
-
 	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 8)
 
 	-- ── Content area ────────────────────────────────────────
@@ -179,8 +200,6 @@ function Library:CreateWindow()
 	ContentContainer.Parent                 = MainFrame
 
 	-- ── Drag ────────────────────────────────────────────────
-	local RunService = game:GetService("RunService")
-
 	local Dragging   = false
 	local DragStart  = nil
 	local StartPos   = nil
@@ -222,7 +241,7 @@ function Library:CreateWindow()
 			TargetPos  = CurrentPos
 
 			local rest = GetRestSize()
-			Tween(MainFrame, {
+			TweenPlay(MainFrame, {
 				Size = UDim2.new(0, rest.X.Offset + DRAG_GROW * 2, 0, rest.Y.Offset + DRAG_GROW * 2)
 			}, 0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
@@ -244,40 +263,83 @@ function Library:CreateWindow()
 		if input.UserInputType == Enum.UserInputType.MouseButton1 and Dragging then
 			Dragging = false
 			StopLerpLoop()
-
 			MainFrame.Position = UDim2.new(
 				StartPos.X.Scale,  CurrentPos.X,
 				StartPos.Y.Scale,  CurrentPos.Y
 			)
-
-			Tween(MainFrame, { Size = GetRestSize() }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+			TweenPlay(MainFrame, { Size = GetRestSize() }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 		end
 	end)
 
 	-- ── Tab system ──────────────────────────────────────────
-	local Tabs = {}
-
-	-- Central registry: every tab's references stored here so
-	-- ActivateTab can reliably touch all of them.
-	local AllTabs    = {}   -- [i] = { button, accent, page }
+	local Tabs        = {}
+	local AllTabs     = {}
 	local ActiveIndex = nil
+
+	-- stagger-animates every child element inside a page
+	-- each element fades in with a small delay between them
+	local function AnimatePageIn(page)
+		local children = {}
+		for _, child in ipairs(page:GetChildren()) do
+			if child:IsA("GuiObject")
+				and not child:IsA("UIListLayout")
+				and not child:IsA("UIPadding")
+			then
+				table.insert(children, child)
+			end
+		end
+
+		for i, child in ipairs(children) do
+			-- hide element + all its text labels instantly
+			child.Visible = false
+			child.BackgroundTransparency = 1
+			for _, sub in ipairs(child:GetDescendants()) do
+				if sub:IsA("TextLabel") or sub:IsA("TextButton") then
+					sub.TextTransparency = 1
+				end
+			end
+
+			task.delay(0.055 * i, function()
+				if not child or not child.Parent then return end
+				child.Visible = true
+
+				-- fade bg in
+				TweenPlay(child, { BackgroundTransparency = 0 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+				-- fade all text children in (slightly delayed for layered feel)
+				task.delay(0.04, function()
+					for _, sub in ipairs(child:GetDescendants()) do
+						if sub:IsA("TextLabel") or sub:IsA("TextButton") then
+							TweenPlay(sub, { TextTransparency = 0 }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+						end
+					end
+				end)
+			end)
+		end
+	end
 
 	local function ActivateTab(index)
 		if ActiveIndex == index then return end
 		-- deactivate all
 		for _, t in ipairs(AllTabs) do
-			t.page.Visible                  = false
-			t.button.TextColor3             = Colors.TextDim
-			t.button.BackgroundColor3       = Colors.Element
-			t.accent.BackgroundTransparency = 1
+			t.page.Visible = false
+			t.button.TextColor3       = Colors.TextDim
+			t.button.BackgroundColor3 = Colors.Element
+			-- shrink accent bar height to 0
+			TweenPlay(t.accent, { Size = UDim2.new(0, 3, 0, 0) }, 0.15, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 		end
 		-- activate chosen
 		local t = AllTabs[index]
-		t.page.Visible                  = true
-		t.button.TextColor3             = Colors.TextActive
-		t.button.BackgroundColor3       = Colors.ElementHover
-		t.accent.BackgroundTransparency = 0
+		t.page.Visible            = true
+		t.button.TextColor3       = Colors.TextActive
+		t.button.BackgroundColor3 = Colors.ElementHover
+		-- grow accent bar from 0 → full height
+		t.accent.Size = UDim2.new(0, 3, 0, 0)
+		TweenPlay(t.accent, { Size = UDim2.new(0, 3, 1, -12) }, 0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 		ActiveIndex = index
+
+		-- stagger the page elements in
+		AnimatePageIn(t.page)
 	end
 
 	function Tabs:CreateTab(TabName)
@@ -291,13 +353,12 @@ function Library:CreateWindow()
 		TabButton.Parent           = TabContainer
 		Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 6)
 
-		-- Accent bar
+		-- Accent bar (animates height on switch)
 		local AccentBar = Instance.new("Frame")
-		AccentBar.Size                   = UDim2.new(0, 3, 1, -12)
+		AccentBar.Size                   = UDim2.new(0, 3, 0, 0)   -- starts collapsed
 		AccentBar.Position               = UDim2.new(0, 4, 0.5, 0)
 		AccentBar.AnchorPoint            = Vector2.new(0, 0.5)
 		AccentBar.BackgroundColor3       = Colors.Accent
-		AccentBar.BackgroundTransparency = 1
 		AccentBar.Parent                 = TabButton
 		Instance.new("UICorner", AccentBar).CornerRadius = UDim.new(0, 2)
 
@@ -314,28 +375,56 @@ function Library:CreateWindow()
 		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
 		Instance.new("UIPadding", Page).PaddingTop  = UDim.new(0, 8)
 
-		-- Register & capture index
+		-- Register
 		table.insert(AllTabs, { button = TabButton, accent = AccentBar, page = Page })
 		local myIndex = #AllTabs
 
-		-- Hover via poller (only visually change when not the active tab)
 		RegisterHover(TabButton,
 			function() if ActiveIndex ~= myIndex then TabButton.BackgroundColor3 = Colors.ElementHover end end,
-			function() if ActiveIndex ~= myIndex then TabButton.BackgroundColor3 = Colors.Element end end
+			function() if ActiveIndex ~= myIndex then TabButton.BackgroundColor3 = Colors.Element    end end
 		)
 
-		-- Click
 		TabButton.MouseButton1Click:Connect(function()
 			ActivateTab(myIndex)
 		end)
 
-		-- Auto-select first tab created
+		-- auto-select first tab
 		if #AllTabs == 1 then
-			ActivateTab(1)
+			-- slight delay so elements are created first, then animate
+			task.delay(0, function() ActivateTab(1) end)
 		end
 
 		-- ── Elements ────────────────────────────────────────
 		local Elements = {}
+
+		-- ── ripple helper ───────────────────────────────────
+		-- spawns a small expanding transparent circle from the click point
+		local function SpawnRipple(parent)
+			local mouse = UserInputService:GetMouseLocation()
+			local relX  = mouse.X - parent.AbsolutePosition.X
+			local relY  = mouse.Y - parent.AbsolutePosition.Y
+
+			local Ripple = Instance.new("Frame")
+			Ripple.Name                   = "Ripple"
+			Ripple.Size                   = UDim2.new(0, 0, 0, 0)
+			Ripple.AnchorPoint            = Vector2.new(0.5, 0.5)
+			Ripple.Position               = UDim2.new(0, relX, 0, relY)
+			Ripple.BackgroundColor3       = Colors.Ripple
+			Ripple.BackgroundTransparency = 0.45
+			Ripple.ZIndex                 = 10
+			Ripple.Parent                 = parent
+			Instance.new("UICorner", Ripple).CornerRadius = UDim.new(1, 0)
+
+			-- expand + fade out
+			TweenPlay(Ripple, {
+				Size                  = UDim2.new(0, 80, 0, 80),
+				BackgroundTransparency = 1
+			}, 0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+			task.delay(0.46, function()
+				if Ripple and Ripple.Parent then Ripple:Destroy() end
+			end)
+		end
 
 		function Elements:CreateButton(Text, Callback)
 			local Button = Instance.new("TextButton")
@@ -351,15 +440,14 @@ function Library:CreateWindow()
 			Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
 			Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 14)
 
-			-- Hover via poller
 			RegisterHover(Button,
 				function() Button.BackgroundColor3 = Colors.ElementHover end,
-				function() Button.BackgroundColor3 = Colors.Element end
+				function() Button.BackgroundColor3 = Colors.Element    end
 			)
 
-			-- Press flash
 			Button.MouseButton1Down:Connect(function()
 				Button.BackgroundColor3 = Colors.ElementActive
+				SpawnRipple(Button)
 			end)
 			Button.MouseButton1Click:Connect(function()
 				Button.BackgroundColor3 = Colors.ElementHover
@@ -436,7 +524,7 @@ function Library:CreateWindow()
 				if Callback then Callback(Value) end
 			end
 
-			SetPercent((Value - Min) / (Max - Min))   -- draw initial state
+			SetPercent((Value - Min) / (Max - Min))
 
 			local function PercentFromMouse()
 				local mx = UserInputService:GetMouseLocation().X
@@ -446,14 +534,23 @@ function Library:CreateWindow()
 				return (mx - bx) / bw
 			end
 
+			-- thumb pulse: briefly grow then shrink back
+			local function PulseThumb()
+				TweenPlay(Thumb, { Size = UDim2.new(0, 20, 0, 20) }, 0.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+				task.delay(0.1, function()
+					if Thumb and Thumb.Parent then
+						TweenPlay(Thumb, { Size = UDim2.new(0, 14, 0, 14) }, 0.15, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+					end
+				end)
+			end
+
 			local sDragging = false
 
-			-- InputBegan on Bar (not the whole frame) so the
-			-- mouse position actually lines up on first click.
 			Bar.InputBegan:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					sDragging = true
 					SetPercent(PercentFromMouse())
+					PulseThumb()
 				end
 			end)
 
@@ -472,6 +569,14 @@ function Library:CreateWindow()
 
 		return Elements
 	end
+
+	-- ── Open animation (runs after everything is built) ────
+	task.defer(function()
+		-- bounce open from zero
+		TweenPlay(MainFrame, { Size = WindowSize }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		-- restore bg transparency (was 0.08 but frame starts invisible at size 0)
+		MainFrame.BackgroundTransparency = 0.08
+	end)
 
 	return Tabs
 end
