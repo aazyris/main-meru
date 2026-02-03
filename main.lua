@@ -335,16 +335,6 @@ end
 	ResizeHandle.Parent           = MainFrame
 	Instance.new("UICorner", ResizeHandle).CornerRadius = UDim.new(0, 0, 0, 4, 0, 0)
 
-	-- Resize icon
-	local ResizeIcon = Instance.new("TextLabel")
-	ResizeIcon.Size             = UDim2.new(1, 0, 1, 0)
-	ResizeIcon.BackgroundTransparency = 1
-	ResizeIcon.Text             = "⤡"
-	ResizeIcon.TextColor3       = Colors.TextActive
-	ResizeIcon.Font             = Enum.Font.Gotham
-	ResizeIcon.TextSize         = 12
-	ResizeIcon.Parent           = ResizeHandle
-
 	-- ── Title Bar ───────────────────────────────────────────
 	local TitleBar = Instance.new("Frame")
 	TitleBar.Size             = UDim2.new(1, 0, 0, 35)
@@ -554,10 +544,6 @@ end
 	end)
 
 	-- ── Resize Functionality ─────────────────────────────────────
-	local Resizing = false
-	local ResizeStart = nil
-	local StartSize = nil
-
 	ResizeHandle.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			Resizing = true
