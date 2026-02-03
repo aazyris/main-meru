@@ -43,19 +43,31 @@ function Library:Notify(Text, Duration, Type)
 	Type = Type or "info" -- info, success, warning, error
 	
 	local Notification = Instance.new("Frame")
-	Notification.Size             = UDim2.new(0, 300, 0, 60)
-	Notification.Position         = UDim2.new(1, 320, 1, -80)
+	Notification.Size             = UDim2.new(0, 320, 0, 70)
+	Notification.Position         = UDim2.new(1, 340, 0, 20)
 	Notification.BackgroundColor3 = Type == "success" and Color3.fromRGB(40, 120, 40) 
 	                               or Type == "warning" and Color3.fromRGB(180, 120, 0)
 	                               or Type == "error" and Color3.fromRGB(180, 40, 40)
 	                               or Colors.Element
 	Notification.Parent           = ScreenGui
 	Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
+	Instance.new("UIStroke", Notification).Color = Colors.Accent
+	Instance.new("UIStroke", Notification).Thickness = 1
+
+	-- Icon background
+	local IconBg = Instance.new("Frame")
+	IconBg.Size             = UDim2.new(0, 32, 0, 32)
+	IconBg.Position         = UDim2.new(0, 12, 0.5, -16)
+	IconBg.BackgroundColor3 = Type == "success" and Color3.fromRGB(60, 140, 60)
+	                         or Type == "warning" and Color3.fromRGB(200, 140, 20)
+	                         or Type == "error" and Color3.fromRGB(200, 60, 60)
+	                         or Colors.Accent
+	IconBg.Parent           = Notification
+	Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
 
 	-- Icon
 	local Icon = Instance.new("TextLabel")
-	Icon.Size             = UDim2.new(0, 24, 0, 24)
-	Icon.Position         = UDim2.new(0, 12, 0, 18)
+	Icon.Size             = UDim2.new(1, 0, 1, 0)
 	Icon.BackgroundTransparency = 1
 	Icon.Text             = Type == "success" and "✓" 
 	                     or Type == "warning" and "!"
@@ -63,29 +75,55 @@ function Library:Notify(Text, Duration, Type)
 	                     or "i"
 	Icon.TextColor3       = Colors.TextActive
 	Icon.Font             = Enum.Font.GothamBold
-	Icon.TextSize         = 16
-	Icon.Parent           = Notification
+	Icon.TextSize         = 18
+	Icon.Parent           = IconBg
+
+	-- Title
+	local Title = Instance.new("TextLabel")
+	Title.Size                   = UDim2.new(1, -60, 0, 20)
+	Title.Position               = UDim2.new(0, 55, 0, 8)
+	Title.BackgroundTransparency = 1
+	Title.Text                   = Type == "success" and "Success"
+	                         or Type == "warning" and "Warning"
+	                         or Type == "error" and "Error"
+	                         or "Information"
+	Title.TextColor3             = Colors.TextActive
+	Title.Font                   = Enum.Font.GothamBold
+	Title.TextSize               = 14
+	Title.TextXAlignment         = Enum.TextXAlignment.Left
+	Title.Parent                 = Notification
 
 	-- Message
 	local Message = Instance.new("TextLabel")
-	Message.Size                   = UDim2.new(1, -50, 1, 0)
-	Message.Position               = UDim2.new(0, 45, 0, 0)
+	Message.Size                   = UDim2.new(1, -60, 0, 30)
+	Message.Position               = UDim2.new(0, 55, 0, 28)
 	Message.BackgroundTransparency = 1
 	Message.Text                   = Text
 	Message.TextColor3             = Colors.Text
 	Message.Font                   = Enum.Font.Gotham
-	Message.TextSize               = 13
+	Message.TextSize               = 12
 	Message.TextXAlignment         = Enum.TextXAlignment.Left
-	Message.TextYAlignment         = Enum.TextYAlignment.Center
+	Message.TextYAlignment         = Enum.TextYAlignment.Top
+	Message.TextWrapped           = true
 	Message.Parent                 = Notification
 
+	-- Progress bar
+	local Progress = Instance.new("Frame")
+	Progress.Size             = UDim2.new(1, 0, 0, 2)
+	Progress.Position         = UDim2.new(0, 0, 1, -2)
+	Progress.BackgroundColor3 = Colors.Accent
+	Progress.Parent           = Notification
+
 	-- Slide in animation
-	TweenPlay(Notification, { Position = UDim2.new(1, -320, 1, -80) }, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
+	-- Progress bar animation
+	TweenPlay(Progress, { Size = UDim2.new(0, 0, 0, 2) }, Duration, Enum.EasingStyle.Linear)
 
 	-- Auto remove
 	task.delay(Duration, function()
 		if Notification and Notification.Parent then
-			TweenPlay(Notification, { Position = UDim2.new(1, 320, 1, -80) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
+			TweenPlay(Notification, { Position = UDim2.new(1, 340, 0, 20) }, 0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
 			task.delay(0.35, function()
 				if Notification and Notification.Parent then Notification:Destroy() end
 			end)
@@ -136,9 +174,12 @@ function Library:CreateWindow()
 	ScreenGui.Parent       = CoreGui
 
 	-- ── Main Frame ──────────────────────────────────────────
-	local WindowSize    = UDim2.new(0, 500, 0, 350)
-	local MinimizedSize = UDim2.new(0, 500, 0, 35)
+	local WindowSize    = UDim2.new(0, 600, 0, 450)
+	local MinimizedSize = UDim2.new(0, 600, 0, 35)
 	local Minimized     = false
+	local Resizing      = false
+	local ResizeStart   = nil
+	local StartSize     = nil
 
 	local MainFrame = Instance.new("Frame")
 	MainFrame.BackgroundColor3       = Colors.BG
@@ -149,6 +190,25 @@ function Library:CreateWindow()
 	MainFrame.ClipsDescendants      = true
 	MainFrame.Parent                = ScreenGui
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
+
+	-- ── Resize Handle ─────────────────────────────────────────
+	local ResizeHandle = Instance.new("Frame")
+	ResizeHandle.Size             = UDim2.new(0, 20, 0, 20)
+	ResizeHandle.Position         = UDim2.new(1, -20, 1, -20)
+	ResizeHandle.BackgroundColor3 = Colors.Accent
+	ResizeHandle.BackgroundTransparency = 0.7
+	ResizeHandle.Parent           = MainFrame
+	Instance.new("UICorner", ResizeHandle).CornerRadius = UDim.new(0, 0, 0, 4, 0, 0)
+
+	-- Resize icon
+	local ResizeIcon = Instance.new("TextLabel")
+	ResizeIcon.Size             = UDim2.new(1, 0, 1, 0)
+	ResizeIcon.BackgroundTransparency = 1
+	ResizeIcon.Text             = "⤡"
+	ResizeIcon.TextColor3       = Colors.TextActive
+	ResizeIcon.Font             = Enum.Font.Gotham
+	ResizeIcon.TextSize         = 12
+	ResizeIcon.Parent           = ResizeHandle
 
 	-- ── Title Bar ───────────────────────────────────────────
 	local TitleBar = Instance.new("Frame")
@@ -327,6 +387,37 @@ function Library:CreateWindow()
 				StartPos.Y.Scale,  CurrentPos.Y
 			)
 			TweenPlay(MainFrame, { Size = GetRestSize() }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		end
+	end)
+
+	-- ── Resize Functionality ─────────────────────────────────────
+	local Resizing = false
+	local ResizeStart = nil
+	local StartSize = nil
+
+	ResizeHandle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			Resizing = true
+			ResizeStart = input.Position
+			StartSize = MainFrame.AbsoluteSize
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if Resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - ResizeStart
+			local newSize = Vector2.new(
+				math.max(400, StartSize.X + delta.X),
+				math.max(300, StartSize.Y + delta.Y)
+			)
+			WindowSize = UDim2.new(0, newSize.X, 0, newSize.Y)
+			MainFrame.Size = WindowSize
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 and Resizing then
+			Resizing = false
 		end
 	end)
 
