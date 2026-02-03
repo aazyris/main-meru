@@ -513,9 +513,11 @@ end
 			TargetPos  = CurrentPos
 
 			local rest = GetRestSize()
-			TweenPlay(MainFrame, {
-				Size = UDim2.new(0, rest.X.Offset + DRAG_GROW * 2, 0, rest.Y.Offset + DRAG_GROW * 2)
-			}, 0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+			if not Minimized then
+				TweenPlay(MainFrame, {
+					Size = UDim2.new(0, rest.X.Offset + DRAG_GROW * 2, 0, rest.Y.Offset + DRAG_GROW * 2)
+				}, 0.18, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+			end
 
 			StartLerpLoop()
 		end
