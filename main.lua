@@ -86,10 +86,10 @@ function Library:CreateWindow()
 		Type = Type or "info"
 		
 		local typeColors = {
-			success = {bg = Colors.BG, accent = Colors.Success},
-			warning = {bg = Colors.BG, accent = Colors.Warning},
-			error = {bg = Colors.BG, accent = Colors.Error},
-			info = {bg = Colors.BG, accent = Colors.Info}
+			success = {accent = Colors.Success},
+			warning = {accent = Colors.Warning},
+			error = {accent = Colors.Error},
+			info = {accent = Colors.Info}
 		}
 		
 		local theme = typeColors[Type] or typeColors.info
@@ -97,7 +97,7 @@ function Library:CreateWindow()
 		local Notification = Instance.new("Frame")
 		Notification.Size             = UDim2.new(0, 320, 0, 70)
 		Notification.Position         = UDim2.new(1, 340, 0, 20)
-		Notification.BackgroundColor3 = theme.bg
+		Notification.BackgroundColor3 = Colors.BG
 		Notification.BackgroundTransparency = 0.08  -- Same as main menu
 		Notification.Parent           = ScreenGui
 		Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
@@ -107,7 +107,7 @@ function Library:CreateWindow()
 		stroke.Thickness = 1
 		stroke.Transparency = 0.5
 
-		-- Icon background (no left accent bar)
+		-- Icon background (no left bar)
 		local IconBg = Instance.new("Frame")
 		IconBg.Size             = UDim2.new(0, 36, 0, 36)
 		IconBg.Position         = UDim2.new(0, 14, 0.5, -18)
@@ -161,21 +161,26 @@ function Library:CreateWindow()
 		Message.TextWrapped           = true
 		Message.Parent                 = Notification
 
-		-- Progress bar (bottom, grey)
+		-- Progress bar background (gray)
 		local ProgressBg = Instance.new("Frame")
 		ProgressBg.Size             = UDim2.new(1, -8, 0, 3)
-		ProgressBg.Position         = UDim2.new(0, 4, 1, -3)
+		ProgressBg.Position         = UDim2.new(0, 4, 1, -6)
 		ProgressBg.BackgroundColor3 = Colors.Panel
 		ProgressBg.BorderSizePixel  = 0
 		ProgressBg.Parent           = Notification
 		Instance.new("UICorner", ProgressBg).CornerRadius = UDim.new(1, 0)
 		
+		-- Progress bar (gray, not colored)
 		local Progress = Instance.new("Frame")
 		Progress.Size             = UDim2.new(1, 0, 1, 0)
-		Progress.BackgroundColor3 = Colors.TextDim  -- Grey progress bar
+		Progress.BackgroundColor3 = Colors.Accent  -- Gray
 		Progress.BorderSizePixel  = 0
 		Progress.Parent           = ProgressBg
 		Instance.new("UICorner", Progress).CornerRadius = UDim.new(1, 0)
+
+		-- Animations
+		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		TweenPlay(Progress, { Size = UDim2.new(0, 0, 1, 0) }, Duration, Enum.EasingStyle.Linear)
 
 		-- Close button
 		local CloseBtn = Instance.new("TextButton")
@@ -194,10 +199,6 @@ function Library:CreateWindow()
 				if Notification and Notification.Parent then Notification:Destroy() end
 			end)
 		end)
-
-		-- Animations
-		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-		TweenPlay(Progress, { Size = UDim2.new(0, 0, 1, 0) }, Duration, Enum.EasingStyle.Linear)
 
 		-- Auto remove
 		task.delay(Duration, function()
@@ -262,7 +263,7 @@ function Library:CreateWindow()
 	TitleLabel.Parent                 = TitleBar
 
 	local MinLabel = Instance.new("TextLabel")
-	MinLabel.Size                   = UDim2.new(0, 20, 1, 0)
+	MinLabel.Size                   = UDim2.new(0, 30, 1, 0)
 	MinLabel.Position               = UDim2.new(1, -70, 0, 0)
 	MinLabel.BackgroundTransparency = 1
 	MinLabel.Text                   = "─"
@@ -272,8 +273,8 @@ function Library:CreateWindow()
 	MinLabel.Parent                 = TitleBar
 
 	local MinButton = Instance.new("TextButton")
-	MinButton.Size                   = UDim2.new(0, 35, 1, 0)
-	MinButton.Position               = UDim2.new(1, -75, 0, 0)
+	MinButton.Size                   = UDim2.new(0, 40, 1, 0)
+	MinButton.Position               = UDim2.new(1, -80, 0, 0)
 	MinButton.BackgroundTransparency = 1
 	MinButton.Text                   = ""
 	MinButton.Parent                 = TitleBar
@@ -296,7 +297,7 @@ function Library:CreateWindow()
 	end)
 
 	local CloseLabel = Instance.new("TextLabel")
-	CloseLabel.Size                   = UDim2.new(0, 20, 1, 0)
+	CloseLabel.Size                   = UDim2.new(0, 30, 1, 0)
 	CloseLabel.Position               = UDim2.new(1, -35, 0, 0)
 	CloseLabel.BackgroundTransparency = 1
 	CloseLabel.Text                   = "×"
@@ -306,8 +307,8 @@ function Library:CreateWindow()
 	CloseLabel.Parent                 = TitleBar
 
 	local CloseButton = Instance.new("TextButton")
-	CloseButton.Size                   = UDim2.new(0, 35, 1, 0)
-	CloseButton.Position               = UDim2.new(1, -40, 0, 0)
+	CloseButton.Size                   = UDim2.new(0, 40, 1, 0)
+	CloseButton.Position               = UDim2.new(1, -45, 0, 0)
 	CloseButton.BackgroundTransparency = 1
 	CloseButton.Text                   = ""
 	CloseButton.Parent                 = TitleBar
@@ -542,10 +543,11 @@ function Library:CreateWindow()
 		Page.CanvasSize             = UDim2.new(0, 0, 0, 0)
 		Page.Parent                 = ContentContainer
 
-		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 8)
-		Instance.new("UIPadding", Page).PaddingTop = UDim.new(0, 12)
-		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 12)
-		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 12)
+		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
+		Instance.new("UIPadding", Page).PaddingTop  = UDim.new(0, 8)
+		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 8)
+		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 8)
+		Instance.new("UIPadding", Page).PaddingBottom = UDim.new(0, 8)
 
 		table.insert(AllTabs, { button = TabButton, accent = AccentBar, page = Page })
 		local myIndex = #AllTabs
@@ -743,6 +745,13 @@ function Library:CreateWindow()
 			ToggleFrame.Parent           = Page
 			Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 6)
 
+			-- Make it a button so we can detect clicks
+			local ToggleButton = Instance.new("TextButton")
+			ToggleButton.Size                   = UDim2.new(1, 0, 1, 0)
+			ToggleButton.BackgroundTransparency = 1
+			ToggleButton.Text                   = ""
+			ToggleButton.Parent                 = ToggleFrame
+
 			local Label = Instance.new("TextLabel")
 			Label.Size                   = UDim2.new(1, -60, 1, 0)
 			Label.Position               = UDim2.new(0, 14, 0, 0)
@@ -780,7 +789,7 @@ function Library:CreateWindow()
 				if Callback then Callback(Toggled) end
 			end
 
-			ToggleFrame.MouseButton1Click:Connect(UpdateToggle)
+			ToggleButton.MouseButton1Click:Connect(UpdateToggle)
 			
 			return ToggleFrame
 		end
