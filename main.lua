@@ -547,9 +547,9 @@ function Library:CreateWindow()
 		Page.ScrollBarImageColor3   = Colors.Accent
 		Page.ScrollBarImageTransparency = 0.3
 		Page.AutomaticCanvasSize    = Enum.AutomaticSize.Y
-		Page.ElasticBehavior        = true
 		Page.ScrollingDirection     = Enum.ScrollingDirection.Y
 		Page.BorderSizePixel        = 0
+		Page.CanvasSize             = UDim2.new(0, 0, 0, 0)
 		Page.Parent                 = ContentContainer
 
 		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
