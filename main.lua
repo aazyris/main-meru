@@ -107,17 +107,7 @@ function Library:CreateWindow()
 		stroke.Thickness = 1
 		stroke.Transparency = 0.5
 
-		-- Left accent bar
-		local AccentBar = Instance.new("Frame")
-		AccentBar.Size             = UDim2.new(0, 4, 1, 0)
-		AccentBar.Position         = UDim2.new(0, 0, 0, 0)
-		AccentBar.BackgroundColor3 = theme.accent
-		AccentBar.BorderSizePixel  = 0
-		AccentBar.Parent           = Notification
-		local corner = Instance.new("UICorner", AccentBar)
-		corner.CornerRadius = UDim.new(0, 8)
-
-		-- Icon background
+		-- Icon background (no left accent bar)
 		local IconBg = Instance.new("Frame")
 		IconBg.Size             = UDim2.new(0, 36, 0, 36)
 		IconBg.Position         = UDim2.new(0, 14, 0.5, -18)
@@ -171,10 +161,10 @@ function Library:CreateWindow()
 		Message.TextWrapped           = true
 		Message.Parent                 = Notification
 
-		-- Progress bar (bottom)
+		-- Progress bar (bottom, grey)
 		local ProgressBg = Instance.new("Frame")
 		ProgressBg.Size             = UDim2.new(1, -8, 0, 3)
-		ProgressBg.Position         = UDim2.new(0, 4, 1, -6)
+		ProgressBg.Position         = UDim2.new(0, 4, 1, -3)
 		ProgressBg.BackgroundColor3 = Colors.Panel
 		ProgressBg.BorderSizePixel  = 0
 		ProgressBg.Parent           = Notification
@@ -182,14 +172,10 @@ function Library:CreateWindow()
 		
 		local Progress = Instance.new("Frame")
 		Progress.Size             = UDim2.new(1, 0, 1, 0)
-		Progress.BackgroundColor3 = theme.accent
+		Progress.BackgroundColor3 = Colors.TextDim  -- Grey progress bar
 		Progress.BorderSizePixel  = 0
 		Progress.Parent           = ProgressBg
 		Instance.new("UICorner", Progress).CornerRadius = UDim.new(1, 0)
-
-		-- Animations
-		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-		TweenPlay(Progress, { Size = UDim2.new(0, 0, 1, 0) }, Duration, Enum.EasingStyle.Linear)
 
 		-- Close button
 		local CloseBtn = Instance.new("TextButton")
@@ -208,6 +194,10 @@ function Library:CreateWindow()
 				if Notification and Notification.Parent then Notification:Destroy() end
 			end)
 		end)
+
+		-- Animations
+		TweenPlay(Notification, { Position = UDim2.new(1, -340, 0, 20) }, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		TweenPlay(Progress, { Size = UDim2.new(0, 0, 1, 0) }, Duration, Enum.EasingStyle.Linear)
 
 		-- Auto remove
 		task.delay(Duration, function()
@@ -282,7 +272,7 @@ function Library:CreateWindow()
 	MinLabel.Parent                 = TitleBar
 
 	local MinButton = Instance.new("TextButton")
-	MinButton.Size                   = UDim2.new(0, 30, 1, 0)
+	MinButton.Size                   = UDim2.new(0, 35, 1, 0)
 	MinButton.Position               = UDim2.new(1, -75, 0, 0)
 	MinButton.BackgroundTransparency = 1
 	MinButton.Text                   = ""
@@ -316,7 +306,7 @@ function Library:CreateWindow()
 	CloseLabel.Parent                 = TitleBar
 
 	local CloseButton = Instance.new("TextButton")
-	CloseButton.Size                   = UDim2.new(0, 30, 1, 0)
+	CloseButton.Size                   = UDim2.new(0, 35, 1, 0)
 	CloseButton.Position               = UDim2.new(1, -40, 0, 0)
 	CloseButton.BackgroundTransparency = 1
 	CloseButton.Text                   = ""
@@ -552,10 +542,10 @@ function Library:CreateWindow()
 		Page.CanvasSize             = UDim2.new(0, 0, 0, 0)
 		Page.Parent                 = ContentContainer
 
-		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 6)
-		Instance.new("UIPadding", Page).PaddingTop  = UDim.new(0, 8)
-		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 8)
-		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 8)
+		Instance.new("UIListLayout", Page).Padding = UDim.new(0, 8)
+		Instance.new("UIPadding", Page).PaddingTop = UDim.new(0, 12)
+		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 12)
+		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 12)
 
 		table.insert(AllTabs, { button = TabButton, accent = AccentBar, page = Page })
 		local myIndex = #AllTabs
