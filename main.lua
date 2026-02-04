@@ -86,10 +86,10 @@ function Library:CreateWindow()
 		Type = Type or "info"
 		
 		local typeColors = {
-			success = {bg = Colors.Element, accent = Colors.Success},
-			warning = {bg = Colors.Element, accent = Colors.Warning},
-			error = {bg = Colors.Element, accent = Colors.Error},
-			info = {bg = Colors.Element, accent = Colors.Info}
+			success = {bg = Colors.BG, accent = Colors.Success},
+			warning = {bg = Colors.BG, accent = Colors.Warning},
+			error = {bg = Colors.BG, accent = Colors.Error},
+			info = {bg = Colors.BG, accent = Colors.Info}
 		}
 		
 		local theme = typeColors[Type] or typeColors.info
@@ -98,13 +98,14 @@ function Library:CreateWindow()
 		Notification.Size             = UDim2.new(0, 320, 0, 70)
 		Notification.Position         = UDim2.new(1, 340, 0, 20)
 		Notification.BackgroundColor3 = theme.bg
+		Notification.BackgroundTransparency = 0.08  -- Same as main menu
 		Notification.Parent           = ScreenGui
 		Instance.new("UICorner", Notification).CornerRadius = UDim.new(0, 8)
 		
 		local stroke = Instance.new("UIStroke", Notification)
 		stroke.Color = Colors.Accent
 		stroke.Thickness = 1
-		stroke.Transparency = 0.3
+		stroke.Transparency = 0.5
 
 		-- Left accent bar
 		local AccentBar = Instance.new("Frame")
@@ -483,39 +484,20 @@ function Library:CreateWindow()
 	local ActiveIndex = nil
 
 	local function AnimatePageIn(page)
-		local children = {}
+		-- Simplified animation - just make everything visible immediately
 		for _, child in ipairs(page:GetChildren()) do
 			if child:IsA("GuiObject")
 				and not child:IsA("UIListLayout")
 				and not child:IsA("UIPadding")
 			then
-				table.insert(children, child)
-			end
-		end
-
-		for i, child in ipairs(children) do
-			child.Visible = false
-			child.BackgroundTransparency = 1
-			for _, sub in ipairs(child:GetDescendants()) do
-				if sub:IsA("TextLabel") or sub:IsA("TextButton") then
-					sub.TextTransparency = 1
+				child.Visible = true
+				child.BackgroundTransparency = 0
+				for _, sub in ipairs(child:GetDescendants()) do
+					if sub:IsA("TextLabel") or sub:IsA("TextButton") then
+						sub.TextTransparency = 0
+					end
 				end
 			end
-
-			task.delay(0.055 * i, function()
-				if not child or not child.Parent then return end
-				child.Visible = true
-
-				TweenPlay(child, { BackgroundTransparency = 0 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-
-				task.delay(0.04, function()
-					for _, sub in ipairs(child:GetDescendants()) do
-						if sub:IsA("TextLabel") or sub:IsA("TextButton") then
-							TweenPlay(sub, { TextTransparency = 0 }, 0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
-						end
-					end
-				end)
-			end)
 		end
 	end
 
@@ -624,12 +606,15 @@ function Library:CreateWindow()
 			local Button = Instance.new("TextButton")
 			Button.Size             = UDim2.new(1, -16, 0, 36)
 			Button.BackgroundColor3 = Colors.Element
+			Button.BackgroundTransparency = 0  -- Start fully visible
 			Button.Text             = Text
 			Button.TextColor3       = Colors.Text
+			Button.TextTransparency = 0  -- Start fully visible
 			Button.Font             = Enum.Font.Gotham
 			Button.TextSize         = 13
 			Button.TextXAlignment   = Enum.TextXAlignment.Left
 			Button.ClipsDescendants = true
+			Button.Visible          = true  -- Ensure visible
 			Button.Parent           = Page
 			Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
 			Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 14)
