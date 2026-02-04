@@ -262,15 +262,21 @@ function Library:CreateWindow()
 	TitleLabel.TextXAlignment         = Enum.TextXAlignment.Left
 	TitleLabel.Parent                 = TitleBar
 
+	local MinimizeContainer = Instance.new("Frame")
+	MinimizeContainer.Size = UDim2.new(0, 30, 1, 0)
+	MinimizeContainer.Position = UDim2.new(1, -70, 0, 0)
+	MinimizeContainer.BackgroundTransparency = 1
+	MinimizeContainer.Parent = TitleBar
+
 	local MinLabel = Instance.new("TextLabel")
-	MinLabel.Size                   = UDim2.new(0, 30, 1, 0)
-	MinLabel.Position               = UDim2.new(1, -70, 0, 0)
+	MinLabel.Size                   = UDim2.new(1, 0, 1, 0)
 	MinLabel.BackgroundTransparency = 1
-	MinLabel.Text                   = "─"
+	MinLabel.Text                   = "▼"
 	MinLabel.TextColor3             = Colors.TextDim
-	MinLabel.TextSize               = 20
+	MinLabel.TextSize               = 14
 	MinLabel.Font                   = Enum.Font.GothamBold
-	MinLabel.Parent                 = TitleBar
+	MinLabel.Rotation               = 0
+	MinLabel.Parent                 = MinimizeContainer
 
 	local MinButton = Instance.new("TextButton")
 	MinButton.Size                   = UDim2.new(0, 40, 1, 0)
@@ -282,17 +288,22 @@ function Library:CreateWindow()
 	RegisterHover(MinButton,
 		function() 
 			MinLabel.TextColor3 = Colors.TextActive
-			TweenPlay(MinLabel, { TextSize = 22 }, 0.1, Enum.EasingStyle.Quart)
+			TweenPlay(MinLabel, { TextSize = 16 }, 0.1, Enum.EasingStyle.Quart)
 		end,
 		function() 
 			MinLabel.TextColor3 = Colors.TextDim
-			TweenPlay(MinLabel, { TextSize = 20 }, 0.1, Enum.EasingStyle.Quart)
+			TweenPlay(MinLabel, { TextSize = 14 }, 0.1, Enum.EasingStyle.Quart)
 		end
 	)
 
 	MinButton.MouseButton1Click:Connect(function()
 		Minimized = not Minimized
-		MinLabel.Text = Minimized and "⬆" or "─"
+		-- Rotate arrow: 0° = down, 180° = up
+		if Minimized then
+			TweenPlay(MinLabel, { Rotation = 180 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		else
+			TweenPlay(MinLabel, { Rotation = 0 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+		end
 		TweenPlay(MainFrame, { Size = Minimized and MinimizedSize or WindowSize }, 0.3, Enum.EasingStyle.Quart)
 	end)
 
@@ -601,36 +612,48 @@ function Library:CreateWindow()
 
 		function Elements:CreateSection(Text)
 			local SectionContainer = Instance.new("Frame")
-			SectionContainer.Size             = UDim2.new(1, -16, 0, 36)
+			SectionContainer.Size             = UDim2.new(1, -16, 0, 40)  -- Slightly taller header
 			SectionContainer.BackgroundTransparency = 1
 			SectionContainer.ClipsDescendants = false
 			SectionContainer.Parent           = Page
 			
 			local SectionHeader = Instance.new("TextButton")
-			SectionHeader.Size             = UDim2.new(1, 0, 0, 36)
-			SectionHeader.BackgroundColor3 = Colors.Element
+			SectionHeader.Size             = UDim2.new(1, 0, 0, 40)  -- Taller header
+			SectionHeader.BackgroundColor3 = Colors.Panel  -- Darker than normal elements
 			SectionHeader.Text             = ""
 			SectionHeader.Parent           = SectionContainer
 			Instance.new("UICorner", SectionHeader).CornerRadius = UDim.new(0, 6)
 			
-			-- Arrow icon
+			-- Add subtle stroke
+			local stroke = Instance.new("UIStroke", SectionHeader)
+			stroke.Color = Colors.Accent
+			stroke.Thickness = 1
+			stroke.Transparency = 0.7
+			
+			-- Arrow icon (using TextLabel for rotation)
+			local ArrowContainer = Instance.new("Frame")
+			ArrowContainer.Size = UDim2.new(0, 20, 0, 20)
+			ArrowContainer.Position = UDim2.new(0, 10, 0.5, -10)
+			ArrowContainer.BackgroundTransparency = 1
+			ArrowContainer.Parent = SectionHeader
+			
 			local Arrow = Instance.new("TextLabel")
-			Arrow.Size                   = UDim2.new(0, 20, 1, 0)
-			Arrow.Position               = UDim2.new(0, 8, 0, 0)
+			Arrow.Size                   = UDim2.new(1, 0, 1, 0)
 			Arrow.BackgroundTransparency = 1
 			Arrow.Text                   = "▶"
-			Arrow.TextColor3             = Colors.TextDim
-			Arrow.Font                   = Enum.Font.Gotham
-			Arrow.TextSize               = 12
-			Arrow.Parent                 = SectionHeader
+			Arrow.TextColor3             = Colors.Accent
+			Arrow.Font                   = Enum.Font.GothamBold
+			Arrow.TextSize               = 10
+			Arrow.Rotation               = 0
+			Arrow.Parent                 = ArrowContainer
 			
 			-- Section title
 			local Title = Instance.new("TextLabel")
-			Title.Size                   = UDim2.new(1, -35, 1, 0)
-			Title.Position               = UDim2.new(0, 35, 0, 0)
+			Title.Size                   = UDim2.new(1, -40, 1, 0)
+			Title.Position               = UDim2.new(0, 40, 0, 0)
 			Title.BackgroundTransparency = 1
 			Title.Text                   = Text
-			Title.TextColor3             = Colors.Text
+			Title.TextColor3             = Colors.TextActive
 			Title.Font                   = Enum.Font.GothamBold
 			Title.TextSize               = 13
 			Title.TextXAlignment         = Enum.TextXAlignment.Left
@@ -639,36 +662,38 @@ function Library:CreateWindow()
 			-- Content container (hidden by default)
 			local Content = Instance.new("Frame")
 			Content.Size             = UDim2.new(1, 0, 0, 0)
-			Content.Position         = UDim2.new(0, 0, 0, 40)
+			Content.Position         = UDim2.new(0, 0, 0, 46)  -- Space between header and content
 			Content.BackgroundTransparency = 1
 			Content.Visible          = false
 			Content.ClipsDescendants = false
 			Content.Parent           = SectionContainer
 			
 			local ContentList = Instance.new("UIListLayout", Content)
-			ContentList.Padding = UDim.new(0, 6)
+			ContentList.Padding = UDim.new(0, 4)  -- Tighter spacing for section items
 			
 			local isOpen = false
 			
 			RegisterHover(SectionHeader,
 				function() 
-					SectionHeader.BackgroundColor3 = Colors.ElementHover
-					Arrow.TextColor3 = Colors.TextActive
+					SectionHeader.BackgroundColor3 = Colors.Element
+					Arrow.TextColor3 = Colors.AccentLight
+					Title.TextColor3 = Colors.TextActive
 				end,
 				function() 
-					SectionHeader.BackgroundColor3 = Colors.Element
-					Arrow.TextColor3 = Colors.TextDim
+					SectionHeader.BackgroundColor3 = Colors.Panel
+					Arrow.TextColor3 = Colors.Accent
+					Title.TextColor3 = Colors.Text
 				end
 			)
 			
 			SectionHeader.MouseButton1Click:Connect(function()
 				isOpen = not isOpen
 				
-				-- Rotate arrow
+				-- Rotate arrow (0° = right, 90° = down)
 				if isOpen then
-					TweenPlay(Arrow, { Rotation = 90 }, 0.2, Enum.EasingStyle.Quart)
+					TweenPlay(Arrow, { Rotation = 90 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				else
-					TweenPlay(Arrow, { Rotation = 0 }, 0.2, Enum.EasingStyle.Quart)
+					TweenPlay(Arrow, { Rotation = 0 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				end
 				
 				-- Show/hide content
@@ -676,16 +701,16 @@ function Library:CreateWindow()
 				
 				-- Update container size
 				task.wait(0.05)
-				local contentHeight = isOpen and ContentList.AbsoluteContentSize.Y + 46 or 36
+				local contentHeight = isOpen and ContentList.AbsoluteContentSize.Y + 46 or 40
 				TweenPlay(SectionContainer, { 
 					Size = UDim2.new(1, -16, 0, contentHeight)
-				}, 0.25, Enum.EasingStyle.Quart)
+				}, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				
 				-- Update content size
 				if isOpen then
 					TweenPlay(Content, {
 						Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
-					}, 0.25, Enum.EasingStyle.Quart)
+					}, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				end
 			end)
 			
@@ -695,7 +720,7 @@ function Library:CreateWindow()
 			function SectionElements:AddButton(Text, Callback)
 				local Button = Instance.new("TextButton")
 				Button.Size             = UDim2.new(1, 0, 0, 32)
-				Button.BackgroundColor3 = Colors.Panel
+				Button.BackgroundColor3 = Colors.Element
 				Button.Text             = Text
 				Button.TextColor3       = Colors.Text
 				Button.Font             = Enum.Font.Gotham
@@ -704,11 +729,11 @@ function Library:CreateWindow()
 				Button.ClipsDescendants = true
 				Button.Parent           = Content
 				Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
-				Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 12)
+				Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 14)
 				
 				RegisterHover(Button,
-					function() Button.BackgroundColor3 = Colors.Element end,
-					function() Button.BackgroundColor3 = Colors.Panel    end
+					function() Button.BackgroundColor3 = Colors.ElementHover end,
+					function() Button.BackgroundColor3 = Colors.Element    end
 				)
 				
 				Button.MouseButton1Click:Connect(function()
@@ -728,7 +753,7 @@ function Library:CreateWindow()
 				
 				local ToggleFrame = Instance.new("Frame")
 				ToggleFrame.Size             = UDim2.new(1, 0, 0, 32)
-				ToggleFrame.BackgroundColor3 = Colors.Panel
+				ToggleFrame.BackgroundColor3 = Colors.Element
 				ToggleFrame.ClipsDescendants = true
 				ToggleFrame.Parent           = Content
 				Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 4)
@@ -740,8 +765,8 @@ function Library:CreateWindow()
 				ToggleButton.Parent                 = ToggleFrame
 				
 				local Label = Instance.new("TextLabel")
-				Label.Size                   = UDim2.new(1, -50, 1, 0)
-				Label.Position               = UDim2.new(0, 12, 0, 0)
+				Label.Size                   = UDim2.new(1, -55, 1, 0)
+				Label.Position               = UDim2.new(0, 14, 0, 0)
 				Label.BackgroundTransparency = 1
 				Label.Text                   = Text
 				Label.TextColor3             = Colors.Text
@@ -751,22 +776,22 @@ function Library:CreateWindow()
 				Label.Parent                 = ToggleFrame
 				
 				local Switch = Instance.new("Frame")
-				Switch.Size             = UDim2.new(0, 36, 0, 18)
-				Switch.Position         = UDim2.new(1, -42, 0.5, -9)
+				Switch.Size             = UDim2.new(0, 38, 0, 20)
+				Switch.Position         = UDim2.new(1, -44, 0.5, -10)
 				Switch.BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70)
 				Switch.Parent           = ToggleFrame
-				Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 9)
+				Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 10)
 				
 				local Knob = Instance.new("Frame")
-				Knob.Size             = UDim2.new(0, 14, 0, 14)
+				Knob.Size             = UDim2.new(0, 16, 0, 16)
 				Knob.Position         = UDim2.new(0, Toggled and 20 or 2, 0, 2)
 				Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				Knob.Parent           = Switch
 				Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
 				
 				RegisterHover(ToggleFrame,
-					function() ToggleFrame.BackgroundColor3 = Colors.Element end,
-					function() ToggleFrame.BackgroundColor3 = Colors.Panel    end
+					function() ToggleFrame.BackgroundColor3 = Colors.ElementHover end,
+					function() ToggleFrame.BackgroundColor3 = Colors.Element    end
 				)
 				
 				local function UpdateToggle()
