@@ -612,28 +612,29 @@ function Library:CreateWindow()
 
 		function Elements:CreateSection(Text)
 			local SectionContainer = Instance.new("Frame")
-			SectionContainer.Size             = UDim2.new(1, -16, 0, 40)  -- Slightly taller header
+			SectionContainer.Size             = UDim2.new(1, -16, 0, 42)
 			SectionContainer.BackgroundTransparency = 1
 			SectionContainer.ClipsDescendants = false
 			SectionContainer.Parent           = Page
 			
 			local SectionHeader = Instance.new("TextButton")
-			SectionHeader.Size             = UDim2.new(1, 0, 0, 40)  -- Taller header
-			SectionHeader.BackgroundColor3 = Colors.Panel  -- Darker than normal elements
+			SectionHeader.Size             = UDim2.new(1, 0, 0, 42)
+			SectionHeader.BackgroundColor3 = Colors.Panel
 			SectionHeader.Text             = ""
+			SectionHeader.AutoButtonColor  = false
 			SectionHeader.Parent           = SectionContainer
 			Instance.new("UICorner", SectionHeader).CornerRadius = UDim.new(0, 6)
 			
-			-- Add subtle stroke
+			-- Stroke for better definition
 			local stroke = Instance.new("UIStroke", SectionHeader)
 			stroke.Color = Colors.Accent
 			stroke.Thickness = 1
-			stroke.Transparency = 0.7
+			stroke.Transparency = 0.6
 			
-			-- Arrow icon (using TextLabel for rotation)
+			-- Arrow container for rotation
 			local ArrowContainer = Instance.new("Frame")
 			ArrowContainer.Size = UDim2.new(0, 20, 0, 20)
-			ArrowContainer.Position = UDim2.new(0, 10, 0.5, -10)
+			ArrowContainer.Position = UDim2.new(0, 12, 0.5, -10)
 			ArrowContainer.BackgroundTransparency = 1
 			ArrowContainer.Parent = SectionHeader
 			
@@ -643,33 +644,33 @@ function Library:CreateWindow()
 			Arrow.Text                   = "▶"
 			Arrow.TextColor3             = Colors.Accent
 			Arrow.Font                   = Enum.Font.GothamBold
-			Arrow.TextSize               = 10
+			Arrow.TextSize               = 11
 			Arrow.Rotation               = 0
 			Arrow.Parent                 = ArrowContainer
 			
 			-- Section title
 			local Title = Instance.new("TextLabel")
-			Title.Size                   = UDim2.new(1, -40, 1, 0)
-			Title.Position               = UDim2.new(0, 40, 0, 0)
+			Title.Size                   = UDim2.new(1, -45, 1, 0)
+			Title.Position               = UDim2.new(0, 42, 0, 0)
 			Title.BackgroundTransparency = 1
 			Title.Text                   = Text
-			Title.TextColor3             = Colors.TextActive
+			Title.TextColor3             = Colors.Text
 			Title.Font                   = Enum.Font.GothamBold
 			Title.TextSize               = 13
 			Title.TextXAlignment         = Enum.TextXAlignment.Left
 			Title.Parent                 = SectionHeader
 			
-			-- Content container (hidden by default)
+			-- Content container
 			local Content = Instance.new("Frame")
 			Content.Size             = UDim2.new(1, 0, 0, 0)
-			Content.Position         = UDim2.new(0, 0, 0, 46)  -- Space between header and content
+			Content.Position         = UDim2.new(0, 0, 0, 48)
 			Content.BackgroundTransparency = 1
 			Content.Visible          = false
 			Content.ClipsDescendants = false
 			Content.Parent           = SectionContainer
 			
 			local ContentList = Instance.new("UIListLayout", Content)
-			ContentList.Padding = UDim.new(0, 4)  -- Tighter spacing for section items
+			ContentList.Padding = UDim.new(0, 4)
 			
 			local isOpen = false
 			
@@ -689,24 +690,25 @@ function Library:CreateWindow()
 			SectionHeader.MouseButton1Click:Connect(function()
 				isOpen = not isOpen
 				
-				-- Rotate arrow (0° = right, 90° = down)
+				-- Rotate arrow
 				if isOpen then
 					TweenPlay(Arrow, { Rotation = 90 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+					Title.TextColor3 = Colors.TextActive
 				else
 					TweenPlay(Arrow, { Rotation = 0 }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+					Title.TextColor3 = Colors.Text
 				end
 				
 				-- Show/hide content
 				Content.Visible = isOpen
 				
-				-- Update container size
+				-- Update sizes
 				task.wait(0.05)
-				local contentHeight = isOpen and ContentList.AbsoluteContentSize.Y + 46 or 40
+				local contentHeight = isOpen and ContentList.AbsoluteContentSize.Y + 48 or 42
 				TweenPlay(SectionContainer, { 
 					Size = UDim2.new(1, -16, 0, contentHeight)
 				}, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 				
-				-- Update content size
 				if isOpen then
 					TweenPlay(Content, {
 						Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
@@ -714,22 +716,22 @@ function Library:CreateWindow()
 				end
 			end)
 			
-			-- Return content container so elements can be added to it
 			local SectionElements = {}
 			
 			function SectionElements:AddButton(Text, Callback)
 				local Button = Instance.new("TextButton")
-				Button.Size             = UDim2.new(1, 0, 0, 32)
+				Button.Size             = UDim2.new(1, 0, 0, 34)
 				Button.BackgroundColor3 = Colors.Element
 				Button.Text             = Text
 				Button.TextColor3       = Colors.Text
 				Button.Font             = Enum.Font.Gotham
 				Button.TextSize         = 12
 				Button.TextXAlignment   = Enum.TextXAlignment.Left
+				Button.AutoButtonColor  = false
 				Button.ClipsDescendants = true
 				Button.Parent           = Content
-				Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
-				Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 14)
+				Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 5)
+				Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 16)
 				
 				RegisterHover(Button,
 					function() Button.BackgroundColor3 = Colors.ElementHover end,
@@ -740,11 +742,11 @@ function Library:CreateWindow()
 					if Callback then Callback() end
 				end)
 				
-				-- Update content size
+				-- Update sizes
 				task.wait()
 				Content.Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
 				if isOpen then
-					SectionContainer.Size = UDim2.new(1, -16, 0, ContentList.AbsoluteContentSize.Y + 46)
+					SectionContainer.Size = UDim2.new(1, -16, 0, ContentList.AbsoluteContentSize.Y + 48)
 				end
 			end
 			
@@ -752,21 +754,22 @@ function Library:CreateWindow()
 				local Toggled = Default or false
 				
 				local ToggleFrame = Instance.new("Frame")
-				ToggleFrame.Size             = UDim2.new(1, 0, 0, 32)
+				ToggleFrame.Size             = UDim2.new(1, 0, 0, 34)
 				ToggleFrame.BackgroundColor3 = Colors.Element
 				ToggleFrame.ClipsDescendants = true
 				ToggleFrame.Parent           = Content
-				Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 4)
+				Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 5)
 				
 				local ToggleButton = Instance.new("TextButton")
 				ToggleButton.Size                   = UDim2.new(1, 0, 1, 0)
 				ToggleButton.BackgroundTransparency = 1
 				ToggleButton.Text                   = ""
+				ToggleButton.AutoButtonColor        = false
 				ToggleButton.Parent                 = ToggleFrame
 				
 				local Label = Instance.new("TextLabel")
-				Label.Size                   = UDim2.new(1, -55, 1, 0)
-				Label.Position               = UDim2.new(0, 14, 0, 0)
+				Label.Size                   = UDim2.new(1, -60, 1, 0)
+				Label.Position               = UDim2.new(0, 16, 0, 0)
 				Label.BackgroundTransparency = 1
 				Label.Text                   = Text
 				Label.TextColor3             = Colors.Text
@@ -776,14 +779,14 @@ function Library:CreateWindow()
 				Label.Parent                 = ToggleFrame
 				
 				local Switch = Instance.new("Frame")
-				Switch.Size             = UDim2.new(0, 38, 0, 20)
-				Switch.Position         = UDim2.new(1, -44, 0.5, -10)
+				Switch.Size             = UDim2.new(0, 40, 0, 22)
+				Switch.Position         = UDim2.new(1, -46, 0.5, -11)
 				Switch.BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70)
 				Switch.Parent           = ToggleFrame
-				Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 10)
+				Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 11)
 				
 				local Knob = Instance.new("Frame")
-				Knob.Size             = UDim2.new(0, 16, 0, 16)
+				Knob.Size             = UDim2.new(0, 18, 0, 18)
 				Knob.Position         = UDim2.new(0, Toggled and 20 or 2, 0, 2)
 				Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				Knob.Parent           = Switch
@@ -803,11 +806,11 @@ function Library:CreateWindow()
 				
 				ToggleButton.MouseButton1Click:Connect(UpdateToggle)
 				
-				-- Update content size
+				-- Update sizes
 				task.wait()
 				Content.Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
 				if isOpen then
-					SectionContainer.Size = UDim2.new(1, -16, 0, ContentList.AbsoluteContentSize.Y + 46)
+					SectionContainer.Size = UDim2.new(1, -16, 0, ContentList.AbsoluteContentSize.Y + 48)
 				end
 			end
 			
