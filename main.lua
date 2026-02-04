@@ -354,12 +354,17 @@ function Library:CreateWindow()
 	TabContainer.ScrollBarThickness     = 0
 	TabContainer.AutomaticCanvasSize    = Enum.AutomaticSize.Y
 	TabContainer.BorderSizePixel        = 0
+	TabContainer.ScrollingEnabled       = false  -- Disable scrolling
+	TabContainer.CanvasSize             = UDim2.new(0, 0, 0, 0)
 	TabContainer.Parent                 = LeftPanel
 
 	local TabList = Instance.new("UIListLayout", TabContainer)
 	TabList.Padding             = UDim.new(0, 4)
 	TabList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 8)
+	Instance.new("UIPadding", TabContainer).PaddingBottom = UDim.new(0, 8)
+	Instance.new("UIPadding", TabContainer).PaddingLeft = UDim.new(0, 10)
+	Instance.new("UIPadding", TabContainer).PaddingRight = UDim.new(0, 10)
 
 	-- ── Content area ────────────────────────────────────────
 	local ContentContainer = Instance.new("Frame")
@@ -592,6 +597,196 @@ function Library:CreateWindow()
 			task.delay(0.46, function()
 				if Ripple and Ripple.Parent then Ripple:Destroy() end
 			end)
+		end
+
+		function Elements:CreateSection(Text)
+			local SectionContainer = Instance.new("Frame")
+			SectionContainer.Size             = UDim2.new(1, -16, 0, 36)
+			SectionContainer.BackgroundTransparency = 1
+			SectionContainer.ClipsDescendants = false
+			SectionContainer.Parent           = Page
+			
+			local SectionHeader = Instance.new("TextButton")
+			SectionHeader.Size             = UDim2.new(1, 0, 0, 36)
+			SectionHeader.BackgroundColor3 = Colors.Element
+			SectionHeader.Text             = ""
+			SectionHeader.Parent           = SectionContainer
+			Instance.new("UICorner", SectionHeader).CornerRadius = UDim.new(0, 6)
+			
+			-- Arrow icon
+			local Arrow = Instance.new("TextLabel")
+			Arrow.Size                   = UDim2.new(0, 20, 1, 0)
+			Arrow.Position               = UDim2.new(0, 8, 0, 0)
+			Arrow.BackgroundTransparency = 1
+			Arrow.Text                   = "▶"
+			Arrow.TextColor3             = Colors.TextDim
+			Arrow.Font                   = Enum.Font.Gotham
+			Arrow.TextSize               = 12
+			Arrow.Parent                 = SectionHeader
+			
+			-- Section title
+			local Title = Instance.new("TextLabel")
+			Title.Size                   = UDim2.new(1, -35, 1, 0)
+			Title.Position               = UDim2.new(0, 35, 0, 0)
+			Title.BackgroundTransparency = 1
+			Title.Text                   = Text
+			Title.TextColor3             = Colors.Text
+			Title.Font                   = Enum.Font.GothamBold
+			Title.TextSize               = 13
+			Title.TextXAlignment         = Enum.TextXAlignment.Left
+			Title.Parent                 = SectionHeader
+			
+			-- Content container (hidden by default)
+			local Content = Instance.new("Frame")
+			Content.Size             = UDim2.new(1, 0, 0, 0)
+			Content.Position         = UDim2.new(0, 0, 0, 40)
+			Content.BackgroundTransparency = 1
+			Content.Visible          = false
+			Content.ClipsDescendants = false
+			Content.Parent           = SectionContainer
+			
+			local ContentList = Instance.new("UIListLayout", Content)
+			ContentList.Padding = UDim.new(0, 6)
+			
+			local isOpen = false
+			
+			RegisterHover(SectionHeader,
+				function() 
+					SectionHeader.BackgroundColor3 = Colors.ElementHover
+					Arrow.TextColor3 = Colors.TextActive
+				end,
+				function() 
+					SectionHeader.BackgroundColor3 = Colors.Element
+					Arrow.TextColor3 = Colors.TextDim
+				end
+			)
+			
+			SectionHeader.MouseButton1Click:Connect(function()
+				isOpen = not isOpen
+				
+				-- Rotate arrow
+				if isOpen then
+					TweenPlay(Arrow, { Rotation = 90 }, 0.2, Enum.EasingStyle.Quart)
+				else
+					TweenPlay(Arrow, { Rotation = 0 }, 0.2, Enum.EasingStyle.Quart)
+				end
+				
+				-- Show/hide content
+				Content.Visible = isOpen
+				
+				-- Update container size
+				task.wait(0.05)
+				local contentHeight = isOpen and ContentList.AbsoluteContentSize.Y + 46 or 36
+				TweenPlay(SectionContainer, { 
+					Size = UDim2.new(1, -16, 0, contentHeight)
+				}, 0.25, Enum.EasingStyle.Quart)
+				
+				-- Update content size
+				if isOpen then
+					TweenPlay(Content, {
+						Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
+					}, 0.25, Enum.EasingStyle.Quart)
+				end
+			end)
+			
+			-- Return content container so elements can be added to it
+			local SectionElements = {}
+			
+			function SectionElements:AddButton(Text, Callback)
+				local Button = Instance.new("TextButton")
+				Button.Size             = UDim2.new(1, 0, 0, 32)
+				Button.BackgroundColor3 = Colors.Panel
+				Button.Text             = Text
+				Button.TextColor3       = Colors.Text
+				Button.Font             = Enum.Font.Gotham
+				Button.TextSize         = 12
+				Button.TextXAlignment   = Enum.TextXAlignment.Left
+				Button.ClipsDescendants = true
+				Button.Parent           = Content
+				Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 4)
+				Instance.new("UIPadding", Button).PaddingLeft  = UDim.new(0, 12)
+				
+				RegisterHover(Button,
+					function() Button.BackgroundColor3 = Colors.Element end,
+					function() Button.BackgroundColor3 = Colors.Panel    end
+				)
+				
+				Button.MouseButton1Click:Connect(function()
+					if Callback then Callback() end
+				end)
+				
+				-- Update content size
+				task.wait()
+				Content.Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
+				if isOpen then
+					SectionContainer.Size = UDim2.new(1, -16, 0, ContentList.AbsoluteContentSize.Y + 46)
+				end
+			end
+			
+			function SectionElements:AddToggle(Text, Callback, Default)
+				local Toggled = Default or false
+				
+				local ToggleFrame = Instance.new("Frame")
+				ToggleFrame.Size             = UDim2.new(1, 0, 0, 32)
+				ToggleFrame.BackgroundColor3 = Colors.Panel
+				ToggleFrame.ClipsDescendants = true
+				ToggleFrame.Parent           = Content
+				Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 4)
+				
+				local ToggleButton = Instance.new("TextButton")
+				ToggleButton.Size                   = UDim2.new(1, 0, 1, 0)
+				ToggleButton.BackgroundTransparency = 1
+				ToggleButton.Text                   = ""
+				ToggleButton.Parent                 = ToggleFrame
+				
+				local Label = Instance.new("TextLabel")
+				Label.Size                   = UDim2.new(1, -50, 1, 0)
+				Label.Position               = UDim2.new(0, 12, 0, 0)
+				Label.BackgroundTransparency = 1
+				Label.Text                   = Text
+				Label.TextColor3             = Colors.Text
+				Label.Font                   = Enum.Font.Gotham
+				Label.TextSize               = 12
+				Label.TextXAlignment         = Enum.TextXAlignment.Left
+				Label.Parent                 = ToggleFrame
+				
+				local Switch = Instance.new("Frame")
+				Switch.Size             = UDim2.new(0, 36, 0, 18)
+				Switch.Position         = UDim2.new(1, -42, 0.5, -9)
+				Switch.BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70)
+				Switch.Parent           = ToggleFrame
+				Instance.new("UICorner", Switch).CornerRadius = UDim.new(0, 9)
+				
+				local Knob = Instance.new("Frame")
+				Knob.Size             = UDim2.new(0, 14, 0, 14)
+				Knob.Position         = UDim2.new(0, Toggled and 20 or 2, 0, 2)
+				Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+				Knob.Parent           = Switch
+				Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+				
+				RegisterHover(ToggleFrame,
+					function() ToggleFrame.BackgroundColor3 = Colors.Element end,
+					function() ToggleFrame.BackgroundColor3 = Colors.Panel    end
+				)
+				
+				local function UpdateToggle()
+					Toggled = not Toggled
+					TweenPlay(Switch, { BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70) }, 0.2, Enum.EasingStyle.Quart)
+					TweenPlay(Knob, { Position = UDim2.new(0, Toggled and 20 or 2, 0, 2) }, 0.2, Enum.EasingStyle.Back)
+					if Callback then Callback(Toggled) end
+				end
+				
+				ToggleButton.MouseButton1Click:Connect(UpdateToggle)
+				
+				-- Update content size
+				task.wait()
+				Content.Size = UDim2.new(1, 0, 0, ContentList.AbsoluteContentSize.Y)
+				if isOpen then
+					SectionContainer.Size = UDim2.new(1, -16, 0, ContentList.AbsoluteContentSize.Y + 46)
+				end
+			end
+			
+			return SectionElements
 		end
 
 		function Elements:CreateButton(Text, Callback)
