@@ -4,19 +4,19 @@ local UserInputService = game:GetService("UserInputService")
 local RunService      = game:GetService("RunService")
 local CoreGui         = game:GetService("CoreGui")
 
--- ── Modern Color Palette (matching the image) ──────────────
+-- ── Modern Color Palette (matching the image exactly) ──────────────
 local Colors = {
-	BG            = Color3.fromRGB(20, 20, 25),
-	Panel         = Color3.fromRGB(28, 28, 33),
-	Element       = Color3.fromRGB(35, 35, 40),
-	ElementHover  = Color3.fromRGB(42, 42, 48),
-	TitleBar      = Color3.fromRGB(25, 25, 30),
-	Text          = Color3.fromRGB(220, 220, 225),
-	TextDim       = Color3.fromRGB(130, 130, 140),
+	BG            = Color3.fromRGB(28, 28, 32),      -- Main background
+	Panel         = Color3.fromRGB(22, 22, 26),      -- Sidebar darker
+	Element       = Color3.fromRGB(38, 38, 42),      -- Element background
+	ElementHover  = Color3.fromRGB(45, 45, 50),
+	TitleBar      = Color3.fromRGB(24, 24, 28),
+	Text          = Color3.fromRGB(235, 235, 240),
+	TextDim       = Color3.fromRGB(140, 140, 145),
 	TextActive    = Color3.fromRGB(255, 255, 255),
-	Accent        = Color3.fromRGB(80, 200, 200),    -- Cyan/Teal
-	AccentDark    = Color3.fromRGB(60, 180, 180),
-	Divider       = Color3.fromRGB(45, 45, 50),
+	Accent        = Color3.fromRGB(100, 210, 210),   -- Cyan
+	AccentDark    = Color3.fromRGB(80, 190, 190),
+	Divider       = Color3.fromRGB(50, 50, 55),
 }
 
 -- ── Helpers ─────────────────────────────────────────────────
@@ -156,15 +156,8 @@ function Library:CreateWindow(Title)
 	TitleLabel.TextXAlignment         = Enum.TextXAlignment.Left
 	TitleLabel.Parent                 = TitleBar
 
-	-- Settings icon (left)
-	local SettingsIcon = Instance.new("ImageLabel")
-	SettingsIcon.Size             = UDim2.new(0, 20, 0, 20)
-	SettingsIcon.Position         = UDim2.new(0, 15, 0.5, -10)
-	SettingsIcon.BackgroundTransparency = 1
-	SettingsIcon.Image            = "rbxassetid://7733964719"
-	SettingsIcon.ImageColor3      = Colors.TextDim
-	SettingsIcon.Parent           = TitleBar
-
+	-- Settings icon removed to match image
+	
 	-- Minimize button
 	local MinButton = Instance.new("TextButton")
 	MinButton.Size                   = UDim2.new(0, 35, 0, 35)
@@ -211,7 +204,7 @@ function Library:CreateWindow(Title)
 
 	-- ── Left Sidebar ────────────────────────────────────────
 	local Sidebar = Instance.new("Frame")
-	Sidebar.Size             = UDim2.new(0, 180, 1, -45)
+	Sidebar.Size             = UDim2.new(0, 70, 1, -45)
 	Sidebar.Position         = UDim2.new(0, 0, 0, 45)
 	Sidebar.BackgroundColor3 = Colors.Panel
 	Sidebar.Parent           = MainFrame
@@ -224,15 +217,15 @@ function Library:CreateWindow(Title)
 	TabContainer.Parent                 = Sidebar
 
 	local TabList = Instance.new("UIListLayout", TabContainer)
-	TabList.Padding = UDim.new(0, 5)
-	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 15)
-	Instance.new("UIPadding", TabContainer).PaddingLeft = UDim.new(0, 12)
-	Instance.new("UIPadding", TabContainer).PaddingRight = UDim.new(0, 12)
+	TabList.Padding = UDim.new(0, 2)
+	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 10)
+	Instance.new("UIPadding", TabContainer).PaddingLeft = UDim.new(0, 8)
+	Instance.new("UIPadding", TabContainer).PaddingRight = UDim.new(0, 8)
 
 	-- ── Content Area ────────────────────────────────────────
 	local ContentContainer = Instance.new("Frame")
-	ContentContainer.Size                   = UDim2.new(1, -180, 1, -45)
-	ContentContainer.Position               = UDim2.new(0, 180, 0, 45)
+	ContentContainer.Size                   = UDim2.new(1, -70, 1, -45)
+	ContentContainer.Position               = UDim2.new(0, 70, 0, 45)
 	ContentContainer.BackgroundTransparency = 1
 	ContentContainer.Parent                 = MainFrame
 
@@ -271,23 +264,31 @@ function Library:CreateWindow(Title)
 
 	function Tabs:CreateTab(TabName, Icon)
 		local TabButton = Instance.new("TextButton")
-		TabButton.Size             = UDim2.new(1, 0, 0, 38)
+		TabButton.Size             = UDim2.new(1, 0, 0, 50)
 		TabButton.BackgroundColor3 = Colors.Element
+		TabButton.BackgroundTransparency = 1
 		TabButton.Text             = ""
 		TabButton.AutoButtonColor  = false
 		TabButton.Parent           = TabContainer
-		Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 8)
+		Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 10)
 
+		-- Icon circle background
+		local IconBg = Instance.new("Frame")
+		IconBg.Size = UDim2.new(0, 40, 0, 40)
+		IconBg.Position = UDim2.new(0.5, -20, 0.5, -20)
+		IconBg.BackgroundColor3 = Colors.Element
+		IconBg.Parent = TabButton
+		Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
+
+		-- Tab icon/letter
 		local TabLabel = Instance.new("TextLabel")
-		TabLabel.Size                   = UDim2.new(1, -15, 1, 0)
-		TabLabel.Position               = UDim2.new(0, 15, 0, 0)
+		TabLabel.Size                   = UDim2.new(1, 0, 1, 0)
 		TabLabel.BackgroundTransparency = 1
-		TabLabel.Text                   = TabName
+		TabLabel.Text                   = TabName:sub(1, 1):upper()  -- First letter
 		TabLabel.TextColor3             = Colors.TextDim
-		TabLabel.Font                   = Enum.Font.GothamMedium
-		TabLabel.TextSize               = 14
-		TabLabel.TextXAlignment         = Enum.TextXAlignment.Left
-		TabLabel.Parent                 = TabButton
+		TabLabel.Font                   = Enum.Font.GothamBold
+		TabLabel.TextSize               = 18
+		TabLabel.Parent                 = IconBg
 
 		local Page = Instance.new("ScrollingFrame")
 		Page.Size                   = UDim2.new(1, 0, 1, 0)
@@ -307,17 +308,17 @@ function Library:CreateWindow(Title)
 		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 15)
 		Instance.new("UIPadding", Page).PaddingBottom = UDim.new(0, 15)
 
-		table.insert(AllTabs, {button = TabButton, label = TabLabel, page = Page})
+		table.insert(AllTabs, {button = TabButton, iconBg = IconBg, label = TabLabel, page = Page})
 		local myIndex = #AllTabs
 
 		local function ActivateTab()
 			for _, tab in ipairs(AllTabs) do
 				tab.page.Visible = false
-				tab.button.BackgroundColor3 = Colors.Element
+				tab.iconBg.BackgroundColor3 = Colors.Element
 				tab.label.TextColor3 = Colors.TextDim
 			end
 			Page.Visible = true
-			TabButton.BackgroundColor3 = Colors.Accent
+			IconBg.BackgroundColor3 = Colors.Accent
 			TabLabel.TextColor3 = Colors.TextActive
 			ActiveTab = myIndex
 		end
@@ -325,12 +326,12 @@ function Library:CreateWindow(Title)
 		RegisterHover(TabButton,
 			function()
 				if ActiveTab ~= myIndex then
-					TabButton.BackgroundColor3 = Colors.ElementHover
+					IconBg.BackgroundColor3 = Colors.ElementHover
 				end
 			end,
 			function()
 				if ActiveTab ~= myIndex then
-					TabButton.BackgroundColor3 = Colors.Element
+					IconBg.BackgroundColor3 = Colors.Element
 				end
 			end
 		)
