@@ -175,7 +175,7 @@ function Library:CreateWindow(Title)
 	CloseButton.Position               = UDim2.new(1, -45, 0.5, -17.5)
 	CloseButton.BackgroundTransparency = 1
 	CloseButton.Text                   = "×"
-	CloseButton.TextColor3             = Color3.fromRGB(255, 100, 100)
+	CloseButton.TextColor3             = Colors.TextActive  -- White
 	CloseButton.TextSize               = 22
 	CloseButton.Font                   = Enum.Font.GothamBold
 	CloseButton.Parent                 = TitleBar
@@ -186,8 +186,14 @@ function Library:CreateWindow(Title)
 	)
 
 	RegisterHover(CloseButton,
-		function() CloseButton.TextColor3 = Color3.fromRGB(255, 150, 150) end,
-		function() CloseButton.TextColor3 = Color3.fromRGB(255, 100, 100) end
+		function() 
+			CloseButton.TextColor3 = Color3.fromRGB(255, 120, 120)
+			TweenPlay(CloseButton, { TextSize = 24 }, 0.15)
+		end,
+		function() 
+			CloseButton.TextColor3 = Colors.TextActive
+			TweenPlay(CloseButton, { TextSize = 22 }, 0.15)
+		end
 	)
 
 	MinButton.MouseButton1Click:Connect(function()
@@ -210,7 +216,7 @@ function Library:CreateWindow(Title)
 	Sidebar.Parent           = MainFrame
 
 	local TabContainer = Instance.new("ScrollingFrame")
-	TabContainer.Size                   = UDim2.new(1, 0, 1, 0)
+	TabContainer.Size                   = UDim2.new(1, 0, 1, -70)  -- Leave space for profile
 	TabContainer.BackgroundTransparency = 1
 	TabContainer.ScrollBarThickness     = 0
 	TabContainer.BorderSizePixel        = 0
@@ -221,6 +227,52 @@ function Library:CreateWindow(Title)
 	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 10)
 	Instance.new("UIPadding", TabContainer).PaddingLeft = UDim.new(0, 8)
 	Instance.new("UIPadding", TabContainer).PaddingRight = UDim.new(0, 8)
+
+	-- ── Player Profile (Bottom Left) ────────────────────────
+	local ProfileContainer = Instance.new("Frame")
+	ProfileContainer.Size             = UDim2.new(1, 0, 0, 60)
+	ProfileContainer.Position         = UDim2.new(0, 0, 1, -60)
+	ProfileContainer.BackgroundTransparency = 1
+	ProfileContainer.Parent           = Sidebar
+
+	local ProfileButton = Instance.new("TextButton")
+	ProfileButton.Size                   = UDim2.new(0, 50, 0, 50)
+	ProfileButton.Position               = UDim2.new(0.5, -25, 0, 5)
+	ProfileButton.BackgroundColor3       = Colors.Element
+	ProfileButton.Text                   = ""
+	ProfileButton.AutoButtonColor        = false
+	ProfileButton.Parent                 = ProfileContainer
+	Instance.new("UICorner", ProfileButton).CornerRadius = UDim.new(1, 0)
+
+	-- Get player avatar
+	local Players = game:GetService("Players")
+	local LocalPlayer = Players.LocalPlayer
+	
+	local function GetPlayerAvatar()
+		local userId = LocalPlayer.UserId
+		local thumbType = Enum.ThumbnailType.HeadShot
+		local thumbSize = Enum.ThumbnailSize.Size150x150
+		local content, isReady = Players:GetUserThumbnailAsync(userId, thumbType, thumbSize)
+		return content
+	end
+	
+	local AvatarImage = Instance.new("ImageLabel")
+	AvatarImage.Size             = UDim2.new(1, 0, 1, 0)
+	AvatarImage.BackgroundTransparency = 1
+	AvatarImage.Image            = GetPlayerAvatar()
+	AvatarImage.Parent           = ProfileButton
+	Instance.new("UICorner", AvatarImage).CornerRadius = UDim.new(1, 0)
+
+	RegisterHover(ProfileButton,
+		function() 
+			TweenPlay(ProfileButton, { Size = UDim2.new(0, 54, 0, 54) }, 0.2)
+			ProfileButton.Position = UDim2.new(0.5, -27, 0, 3)
+		end,
+		function() 
+			TweenPlay(ProfileButton, { Size = UDim2.new(0, 50, 0, 50) }, 0.2)
+			ProfileButton.Position = UDim2.new(0.5, -25, 0, 5)
+		end
+	)
 
 	-- ── Content Area ────────────────────────────────────────
 	local ContentContainer = Instance.new("Frame")
@@ -347,15 +399,22 @@ function Library:CreateWindow(Title)
 		local Elements = {}
 
 		function Elements:CreateSection(SectionName)
+			local SectionFrame = Instance.new("Frame")
+			SectionFrame.Size                   = UDim2.new(1, 0, 0, 35)
+			SectionFrame.BackgroundTransparency = 1
+			SectionFrame.Parent                 = Page
+
 			local SectionLabel = Instance.new("TextLabel")
-			SectionLabel.Size                   = UDim2.new(1, 0, 0, 25)
+			SectionLabel.Size                   = UDim2.new(1, 0, 1, 0)
+			SectionLabel.Position               = UDim2.new(0, 0, 0, 10)
 			SectionLabel.BackgroundTransparency = 1
 			SectionLabel.Text                   = SectionName
 			SectionLabel.TextColor3             = Colors.Text
 			SectionLabel.Font                   = Enum.Font.GothamBold
 			SectionLabel.TextSize               = 15
 			SectionLabel.TextXAlignment         = Enum.TextXAlignment.Left
-			SectionLabel.Parent                 = Page
+			SectionLabel.TextYAlignment         = Enum.TextYAlignment.Top
+			SectionLabel.Parent                 = SectionFrame
 		end
 
 		function Elements:CreateToggle(Text, Subtitle, Callback, Default)
@@ -412,6 +471,15 @@ function Library:CreateWindow(Title)
 			Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 			Knob.Parent           = Switch
 			Instance.new("UICorner", Knob).CornerRadius = UDim.new(1, 0)
+
+			RegisterHover(ToggleFrame,
+				function() 
+					ToggleFrame.BackgroundColor3 = Colors.ElementHover
+				end,
+				function() 
+					ToggleFrame.BackgroundColor3 = Colors.Element
+				end
+			)
 
 			local function UpdateToggle()
 				Toggled = not Toggled
@@ -524,6 +592,194 @@ function Library:CreateWindow(Title)
 
 			Button.MouseButton1Click:Connect(function()
 				if Callback then Callback() end
+			end)
+		end
+
+		function Elements:CreateDropdown(Text, Options, Callback)
+			local Selected = Options[1] or ""
+			local Open = false
+
+			local DropdownFrame = Instance.new("Frame")
+			DropdownFrame.Size             = UDim2.new(1, 0, 0, 45)
+			DropdownFrame.BackgroundColor3 = Colors.Element
+			DropdownFrame.ClipsDescendants = false
+			DropdownFrame.Parent           = Page
+			Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 10)
+
+			local DropdownButton = Instance.new("TextButton")
+			DropdownButton.Size                   = UDim2.new(1, 0, 1, 0)
+			DropdownButton.BackgroundTransparency = 1
+			DropdownButton.Text                   = ""
+			DropdownButton.AutoButtonColor        = false
+			DropdownButton.Parent                 = DropdownFrame
+
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(1, -80, 1, 0)
+			Label.Position               = UDim2.new(0, 18, 0, 0)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.GothamMedium
+			Label.TextSize               = 14
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = DropdownFrame
+
+			local ValueLabel = Instance.new("TextLabel")
+			ValueLabel.Size                   = UDim2.new(0, 100, 1, 0)
+			ValueLabel.Position               = UDim2.new(1, -118, 0, 0)
+			ValueLabel.BackgroundTransparency = 1
+			ValueLabel.Text                   = Selected
+			ValueLabel.TextColor3             = Colors.TextDim
+			ValueLabel.Font                   = Enum.Font.Gotham
+			ValueLabel.TextSize               = 13
+			ValueLabel.TextXAlignment         = Enum.TextXAlignment.Right
+			ValueLabel.Parent                 = DropdownFrame
+
+			local Arrow = Instance.new("TextLabel")
+			Arrow.Size                   = UDim2.new(0, 20, 1, 0)
+			Arrow.Position               = UDim2.new(1, -25, 0, 0)
+			Arrow.BackgroundTransparency = 1
+			Arrow.Text                   = "▼"
+			Arrow.TextColor3             = Colors.TextDim
+			Arrow.Font                   = Enum.Font.Gotham
+			Arrow.TextSize               = 10
+			Arrow.Parent                 = DropdownFrame
+
+			local OptionsFrame = Instance.new("Frame")
+			OptionsFrame.Size             = UDim2.new(1, 0, 0, 0)
+			OptionsFrame.Position         = UDim2.new(0, 0, 1, 5)
+			OptionsFrame.BackgroundColor3 = Colors.Panel
+			OptionsFrame.Visible          = false
+			OptionsFrame.Parent           = DropdownFrame
+			Instance.new("UICorner", OptionsFrame).CornerRadius = UDim.new(0, 8)
+
+			local OptionsList = Instance.new("UIListLayout", OptionsFrame)
+			OptionsList.Padding = UDim.new(0, 2)
+			Instance.new("UIPadding", OptionsFrame).PaddingTop = UDim.new(0, 5)
+			Instance.new("UIPadding", OptionsFrame).PaddingBottom = UDim.new(0, 5)
+
+			for _, option in ipairs(Options) do
+				local OptionButton = Instance.new("TextButton")
+				OptionButton.Size             = UDim2.new(1, 0, 0, 32)
+				OptionButton.BackgroundTransparency = 1
+				OptionButton.Text             = option
+				OptionButton.TextColor3       = Colors.Text
+				OptionButton.Font             = Enum.Font.Gotham
+				OptionButton.TextSize         = 13
+				OptionButton.AutoButtonColor  = false
+				OptionButton.Parent           = OptionsFrame
+
+				RegisterHover(OptionButton,
+					function() OptionButton.BackgroundColor3 = Colors.Element
+						OptionButton.BackgroundTransparency = 0
+					end,
+					function() OptionButton.BackgroundTransparency = 1 end
+				)
+
+				OptionButton.MouseButton1Click:Connect(function()
+					Selected = option
+					ValueLabel.Text = option
+					Open = false
+					OptionsFrame.Visible = false
+					TweenPlay(Arrow, {Rotation = 0}, 0.2)
+					if Callback then Callback(option) end
+				end)
+			end
+
+			OptionsFrame.Size = UDim2.new(1, 0, 0, (#Options * 34) + 10)
+
+			DropdownButton.MouseButton1Click:Connect(function()
+				Open = not Open
+				OptionsFrame.Visible = Open
+				TweenPlay(Arrow, {Rotation = Open and 180 or 0}, 0.2)
+			end)
+		end
+
+		function Elements:CreateTextbox(Text, Placeholder, Callback)
+			local TextboxFrame = Instance.new("Frame")
+			TextboxFrame.Size             = UDim2.new(1, 0, 0, 45)
+			TextboxFrame.BackgroundColor3 = Colors.Element
+			TextboxFrame.Parent           = Page
+			Instance.new("UICorner", TextboxFrame).CornerRadius = UDim.new(0, 10)
+
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(0.4, 0, 1, 0)
+			Label.Position               = UDim2.new(0, 18, 0, 0)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.GothamMedium
+			Label.TextSize               = 14
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = TextboxFrame
+
+			local Textbox = Instance.new("TextBox")
+			Textbox.Size             = UDim2.new(0.55, -25, 0, 30)
+			Textbox.Position         = UDim2.new(0.45, 0, 0.5, -15)
+			Textbox.BackgroundColor3 = Colors.Panel
+			Textbox.Text             = ""
+			Textbox.PlaceholderText  = Placeholder or ""
+			Textbox.TextColor3       = Colors.Text
+			Textbox.PlaceholderColor3 = Colors.TextDim
+			Textbox.Font             = Enum.Font.Gotham
+			Textbox.TextSize         = 13
+			Textbox.Parent           = TextboxFrame
+			Instance.new("UICorner", Textbox).CornerRadius = UDim.new(0, 6)
+
+			Textbox.FocusLost:Connect(function()
+				if Callback then Callback(Textbox.Text) end
+			end)
+		end
+
+		function Elements:CreateKeybind(Text, DefaultKey, Callback)
+			local CurrentKey = DefaultKey or "None"
+			local Binding = false
+
+			local KeybindFrame = Instance.new("Frame")
+			KeybindFrame.Size             = UDim2.new(1, 0, 0, 45)
+			KeybindFrame.BackgroundColor3 = Colors.Element
+			KeybindFrame.Parent           = Page
+			Instance.new("UICorner", KeybindFrame).CornerRadius = UDim.new(0, 10)
+
+			local Label = Instance.new("TextLabel")
+			Label.Size                   = UDim2.new(1, -120, 1, 0)
+			Label.Position               = UDim2.new(0, 18, 0, 0)
+			Label.BackgroundTransparency = 1
+			Label.Text                   = Text
+			Label.TextColor3             = Colors.Text
+			Label.Font                   = Enum.Font.GothamMedium
+			Label.TextSize               = 14
+			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.Parent                 = KeybindFrame
+
+			local KeyButton = Instance.new("TextButton")
+			KeyButton.Size             = UDim2.new(0, 100, 0, 30)
+			KeyButton.Position         = UDim2.new(1, -115, 0.5, -15)
+			KeyButton.BackgroundColor3 = Colors.Panel
+			KeyButton.Text             = CurrentKey
+			KeyButton.TextColor3       = Colors.TextDim
+			KeyButton.Font             = Enum.Font.GothamMedium
+			KeyButton.TextSize         = 13
+			KeyButton.AutoButtonColor  = false
+			KeyButton.Parent           = KeybindFrame
+			Instance.new("UICorner", KeyButton).CornerRadius = UDim.new(0, 6)
+
+			KeyButton.MouseButton1Click:Connect(function()
+				Binding = true
+				KeyButton.Text = "..."
+				KeyButton.TextColor3 = Colors.Accent
+			end)
+
+			UserInputService.InputBegan:Connect(function(input)
+				if Binding then
+					if input.KeyCode ~= Enum.KeyCode.Unknown then
+						CurrentKey = input.KeyCode.Name
+						KeyButton.Text = CurrentKey
+						KeyButton.TextColor3 = Colors.TextDim
+						Binding = false
+						if Callback then Callback(CurrentKey) end
+					end
+				end
 			end)
 		end
 
