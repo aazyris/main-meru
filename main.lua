@@ -134,20 +134,43 @@ function Library:CreateWindow(Title)
 	MainFrame.AnchorPoint      = Vector2.new(0.5, 0.5)
 	MainFrame.Position         = UDim2.new(0.5, 0, 0.5, 0)
 	MainFrame.BackgroundColor3 = Colors.BG
+	MainFrame.BackgroundTransparency = 0.05  -- Slight transparency
 	MainFrame.ClipsDescendants = true
 	MainFrame.Parent           = ScreenGui
 	Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+	
+	-- Add subtle shadow effect
+	local Shadow = Instance.new("ImageLabel")
+	Shadow.Name = "Shadow"
+	Shadow.Size = UDim2.new(1, 40, 1, 40)
+	Shadow.Position = UDim2.new(0, -20, 0, -20)
+	Shadow.BackgroundTransparency = 1
+	Shadow.Image = "rbxassetid://5554236805"
+	Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+	Shadow.ImageTransparency = 0.6
+	Shadow.ZIndex = 0
+	Shadow.Parent = MainFrame
 
 	-- ── Title Bar ───────────────────────────────────────────
 	local TitleBar = Instance.new("Frame")
-	TitleBar.Size             = UDim2.new(1, 0, 0, 45)
+	TitleBar.Size             = UDim2.new(1, 0, 0, 50)
 	TitleBar.BackgroundColor3 = Colors.TitleBar
+	TitleBar.BackgroundTransparency = 0.1
 	TitleBar.Parent           = MainFrame
 	Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 12)
+	
+	-- Bottom border line
+	local TitleBorder = Instance.new("Frame")
+	TitleBorder.Size = UDim2.new(1, 0, 0, 1)
+	TitleBorder.Position = UDim2.new(0, 0, 1, 0)
+	TitleBorder.BackgroundColor3 = Colors.Divider
+	TitleBorder.BackgroundTransparency = 0.5
+	TitleBorder.BorderSizePixel = 0
+	TitleBorder.Parent = TitleBar
 
 	local TitleLabel = Instance.new("TextLabel")
 	TitleLabel.Size                   = UDim2.new(1, -100, 1, 0)
-	TitleLabel.Position               = UDim2.new(0, 20, 0, 0)
+	TitleLabel.Position               = UDim2.new(0, 25, 0, 0)
 	TitleLabel.BackgroundTransparency = 1
 	TitleLabel.Text                   = Title
 	TitleLabel.TextColor3             = Colors.TextActive
@@ -210,23 +233,34 @@ function Library:CreateWindow(Title)
 
 	-- ── Left Sidebar ────────────────────────────────────────
 	local Sidebar = Instance.new("Frame")
-	Sidebar.Size             = UDim2.new(0, 70, 1, -45)
-	Sidebar.Position         = UDim2.new(0, 0, 0, 45)
+	Sidebar.Size             = UDim2.new(0, 75, 1, -50)
+	Sidebar.Position         = UDim2.new(0, 0, 0, 50)
 	Sidebar.BackgroundColor3 = Colors.Panel
+	Sidebar.BackgroundTransparency = 0.1
+	Sidebar.BorderSizePixel  = 0
 	Sidebar.Parent           = MainFrame
+	
+	-- Right border
+	local SidebarBorder = Instance.new("Frame")
+	SidebarBorder.Size = UDim2.new(0, 1, 1, 0)
+	SidebarBorder.Position = UDim2.new(1, 0, 0, 0)
+	SidebarBorder.BackgroundColor3 = Colors.Divider
+	SidebarBorder.BackgroundTransparency = 0.5
+	SidebarBorder.BorderSizePixel = 0
+	SidebarBorder.Parent = Sidebar
 
 	local TabContainer = Instance.new("ScrollingFrame")
-	TabContainer.Size                   = UDim2.new(1, 0, 1, -70)  -- Leave space for profile
+	TabContainer.Size                   = UDim2.new(1, 0, 1, -75)
 	TabContainer.BackgroundTransparency = 1
 	TabContainer.ScrollBarThickness     = 0
 	TabContainer.BorderSizePixel        = 0
 	TabContainer.Parent                 = Sidebar
 
 	local TabList = Instance.new("UIListLayout", TabContainer)
-	TabList.Padding = UDim.new(0, 2)
-	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 10)
-	Instance.new("UIPadding", TabContainer).PaddingLeft = UDim.new(0, 8)
-	Instance.new("UIPadding", TabContainer).PaddingRight = UDim.new(0, 8)
+	TabList.Padding = UDim.new(0, 6)
+	Instance.new("UIPadding", TabContainer).PaddingTop = UDim.new(0, 15)
+	Instance.new("UIPadding", TabContainer).PaddingLeft = UDim.new(0, 12)
+	Instance.new("UIPadding", TabContainer).PaddingRight = UDim.new(0, 12)
 
 	-- ── Player Profile (Bottom Left) ────────────────────────
 	local ProfileContainer = Instance.new("Frame")
@@ -276,8 +310,8 @@ function Library:CreateWindow(Title)
 
 	-- ── Content Area ────────────────────────────────────────
 	local ContentContainer = Instance.new("Frame")
-	ContentContainer.Size                   = UDim2.new(1, -70, 1, -45)
-	ContentContainer.Position               = UDim2.new(0, 70, 0, 45)
+	ContentContainer.Size                   = UDim2.new(1, -75, 1, -50)
+	ContentContainer.Position               = UDim2.new(0, 75, 0, 50)
 	ContentContainer.BackgroundTransparency = 1
 	ContentContainer.Parent                 = MainFrame
 
@@ -322,21 +356,28 @@ function Library:CreateWindow(Title)
 		TabButton.Text             = ""
 		TabButton.AutoButtonColor  = false
 		TabButton.Parent           = TabContainer
-		Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 10)
+		Instance.new("UICorner", TabButton).CornerRadius = UDim.new(0, 12)
 
 		-- Icon circle background
 		local IconBg = Instance.new("Frame")
-		IconBg.Size = UDim2.new(0, 40, 0, 40)
-		IconBg.Position = UDim2.new(0.5, -20, 0.5, -20)
+		IconBg.Size = UDim2.new(0, 42, 0, 42)
+		IconBg.Position = UDim2.new(0.5, -21, 0.5, -21)
 		IconBg.BackgroundColor3 = Colors.Element
+		IconBg.BackgroundTransparency = 0.3
 		IconBg.Parent = TabButton
 		Instance.new("UICorner", IconBg).CornerRadius = UDim.new(1, 0)
+		
+		-- Subtle glow effect
+		local IconGlow = Instance.new("UIStroke", IconBg)
+		IconGlow.Color = Colors.Accent
+		IconGlow.Thickness = 0
+		IconGlow.Transparency = 0.5
 
 		-- Tab icon/letter
 		local TabLabel = Instance.new("TextLabel")
 		TabLabel.Size                   = UDim2.new(1, 0, 1, 0)
 		TabLabel.BackgroundTransparency = 1
-		TabLabel.Text                   = TabName:sub(1, 1):upper()  -- First letter
+		TabLabel.Text                   = TabName:sub(1, 1):upper()
 		TabLabel.TextColor3             = Colors.TextDim
 		TabLabel.Font                   = Enum.Font.GothamBold
 		TabLabel.TextSize               = 18
@@ -354,36 +395,40 @@ function Library:CreateWindow(Title)
 		Page.Parent                 = ContentContainer
 
 		local PageList = Instance.new("UIListLayout", Page)
-		PageList.Padding = UDim.new(0, 12)
-		Instance.new("UIPadding", Page).PaddingTop = UDim.new(0, 15)
-		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 15)
-		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 15)
-		Instance.new("UIPadding", Page).PaddingBottom = UDim.new(0, 15)
+		PageList.Padding = UDim.new(0, 10)  -- More spacing between elements
+		Instance.new("UIPadding", Page).PaddingTop = UDim.new(0, 20)
+		Instance.new("UIPadding", Page).PaddingLeft = UDim.new(0, 20)
+		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 20)
+		Instance.new("UIPadding", Page).PaddingBottom = UDim.new(0, 20)
 
-		table.insert(AllTabs, {button = TabButton, iconBg = IconBg, label = TabLabel, page = Page})
+		table.insert(AllTabs, {button = TabButton, iconBg = IconBg, label = TabLabel, page = Page, glow = IconGlow})
 		local myIndex = #AllTabs
 
 		local function ActivateTab()
 			for _, tab in ipairs(AllTabs) do
 				tab.page.Visible = false
-				tab.iconBg.BackgroundColor3 = Colors.Element
-				tab.label.TextColor3 = Colors.TextDim
+				TweenPlay(tab.iconBg, {BackgroundColor3 = Colors.Element, BackgroundTransparency = 0.3}, 0.25)
+				TweenPlay(tab.label, {TextColor3 = Colors.TextDim}, 0.25)
+				TweenPlay(tab.glow, {Thickness = 0}, 0.25)
 			end
 			Page.Visible = true
-			IconBg.BackgroundColor3 = Colors.Accent
-			TabLabel.TextColor3 = Colors.TextActive
+			TweenPlay(IconBg, {BackgroundColor3 = Colors.Accent, BackgroundTransparency = 0}, 0.25)
+			TweenPlay(TabLabel, {TextColor3 = Colors.TextActive}, 0.25)
+			TweenPlay(IconGlow, {Thickness = 2}, 0.25)
 			ActiveTab = myIndex
 		end
 
 		RegisterHover(TabButton,
 			function()
 				if ActiveTab ~= myIndex then
-					IconBg.BackgroundColor3 = Colors.ElementHover
+					TweenPlay(IconBg, {BackgroundTransparency = 0, BackgroundColor3 = Colors.ElementHover}, 0.2)
+					TweenPlay(TabLabel, {TextColor3 = Colors.Text}, 0.2)
 				end
 			end,
 			function()
 				if ActiveTab ~= myIndex then
-					IconBg.BackgroundColor3 = Colors.Element
+					TweenPlay(IconBg, {BackgroundTransparency = 0.3, BackgroundColor3 = Colors.Element}, 0.2)
+					TweenPlay(TabLabel, {TextColor3 = Colors.TextDim}, 0.2)
 				end
 			end
 		)
@@ -421,8 +466,9 @@ function Library:CreateWindow(Title)
 			local Toggled = Default or false
 
 			local ToggleFrame = Instance.new("Frame")
-			ToggleFrame.Size             = UDim2.new(1, 0, 0, Subtitle and 55 or 45)
+			ToggleFrame.Size             = UDim2.new(1, 0, 0, Subtitle and 60 or 50)
 			ToggleFrame.BackgroundColor3 = Colors.Element
+			ToggleFrame.BackgroundTransparency = 0.2
 			ToggleFrame.Parent           = Page
 			Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 10)
 
@@ -434,8 +480,8 @@ function Library:CreateWindow(Title)
 			ToggleButton.Parent                 = ToggleFrame
 
 			local Label = Instance.new("TextLabel")
-			Label.Size                   = UDim2.new(1, -70, 0, Subtitle and 20 or 45)
-			Label.Position               = UDim2.new(0, 18, 0, Subtitle and 10 or 0)
+			Label.Size                   = UDim2.new(1, -80, 0, Subtitle and 22 or 50)
+			Label.Position               = UDim2.new(0, 20, 0, Subtitle and 12 or 0)
 			Label.BackgroundTransparency = 1
 			Label.Text                   = Text
 			Label.TextColor3             = Colors.Text
@@ -447,8 +493,8 @@ function Library:CreateWindow(Title)
 
 			if Subtitle then
 				local SubLabel = Instance.new("TextLabel")
-				SubLabel.Size                   = UDim2.new(1, -70, 0, 18)
-				SubLabel.Position               = UDim2.new(0, 18, 0, 30)
+				SubLabel.Size                   = UDim2.new(1, -80, 0, 18)
+				SubLabel.Position               = UDim2.new(0, 20, 0, 34)
 				SubLabel.BackgroundTransparency = 1
 				SubLabel.Text                   = Subtitle
 				SubLabel.TextColor3             = Colors.TextDim
@@ -459,14 +505,14 @@ function Library:CreateWindow(Title)
 			end
 
 			local Switch = Instance.new("Frame")
-			Switch.Size             = UDim2.new(0, 46, 0, 26)
-			Switch.Position         = UDim2.new(1, -60, 0.5, -13)
-			Switch.BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70)
+			Switch.Size             = UDim2.new(0, 48, 0, 28)
+			Switch.Position         = UDim2.new(1, -65, 0.5, -14)
+			Switch.BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(55, 55, 65)
 			Switch.Parent           = ToggleFrame
 			Instance.new("UICorner", Switch).CornerRadius = UDim.new(1, 0)
 
 			local Knob = Instance.new("Frame")
-			Knob.Size             = UDim2.new(0, 22, 0, 22)
+			Knob.Size             = UDim2.new(0, 24, 0, 24)
 			Knob.Position         = UDim2.new(0, Toggled and 22 or 2, 0, 2)
 			Knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 			Knob.Parent           = Switch
@@ -474,17 +520,17 @@ function Library:CreateWindow(Title)
 
 			RegisterHover(ToggleFrame,
 				function() 
-					ToggleFrame.BackgroundColor3 = Colors.ElementHover
+					TweenPlay(ToggleFrame, {BackgroundTransparency = 0}, 0.2)
 				end,
 				function() 
-					ToggleFrame.BackgroundColor3 = Colors.Element
+					TweenPlay(ToggleFrame, {BackgroundTransparency = 0.2}, 0.2)
 				end
 			)
 
 			local function UpdateToggle()
 				Toggled = not Toggled
-				TweenPlay(Switch, {BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(60, 60, 70)}, 0.2)
-				TweenPlay(Knob, {Position = UDim2.new(0, Toggled and 22 or 2, 0, 2)}, 0.25, Enum.EasingStyle.Back)
+				TweenPlay(Switch, {BackgroundColor3 = Toggled and Colors.Accent or Color3.fromRGB(55, 55, 65)}, 0.25)
+				TweenPlay(Knob, {Position = UDim2.new(0, Toggled and 22 or 2, 0, 2)}, 0.3, Enum.EasingStyle.Back)
 				if Callback then Callback(Toggled) end
 			end
 
@@ -495,14 +541,15 @@ function Library:CreateWindow(Title)
 			local Value = Default or Min
 
 			local SliderFrame = Instance.new("Frame")
-			SliderFrame.Size             = UDim2.new(1, 0, 0, 60)
+			SliderFrame.Size             = UDim2.new(1, 0, 0, 65)
 			SliderFrame.BackgroundColor3 = Colors.Element
+			SliderFrame.BackgroundTransparency = 0.2
 			SliderFrame.Parent           = Page
 			Instance.new("UICorner", SliderFrame).CornerRadius = UDim.new(0, 10)
 
 			local Title = Instance.new("TextLabel")
-			Title.Size                   = UDim2.new(1, -80, 0, 20)
-			Title.Position               = UDim2.new(0, 18, 0, 12)
+			Title.Size                   = UDim2.new(1, -90, 0, 22)
+			Title.Position               = UDim2.new(0, 20, 0, 14)
 			Title.BackgroundTransparency = 1
 			Title.Text                   = Text
 			Title.TextColor3             = Colors.Text
@@ -512,34 +559,41 @@ function Library:CreateWindow(Title)
 			Title.Parent                 = SliderFrame
 
 			local ValueLabel = Instance.new("TextLabel")
-			ValueLabel.Size                   = UDim2.new(0, 50, 0, 20)
-			ValueLabel.Position               = UDim2.new(1, -65, 0, 12)
+			ValueLabel.Size                   = UDim2.new(0, 60, 0, 22)
+			ValueLabel.Position               = UDim2.new(1, -75, 0, 14)
 			ValueLabel.BackgroundTransparency = 1
 			ValueLabel.Text                   = tostring(Value)
 			ValueLabel.TextColor3             = Colors.TextDim
-			ValueLabel.Font                   = Enum.Font.GothamMedium
+			ValueLabel.Font                   = Enum.Font.GothamBold
 			ValueLabel.TextSize               = 14
 			ValueLabel.TextXAlignment         = Enum.TextXAlignment.Right
 			ValueLabel.Parent                 = SliderFrame
 
-			local Bar = Instance.new("Frame")
-			Bar.Size             = UDim2.new(1, -36, 0, 6)
-			Bar.Position         = UDim2.new(0, 18, 1, -20)
-			Bar.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
-			Bar.BorderSizePixel  = 0
-			Bar.Parent           = SliderFrame
-			Instance.new("UICorner", Bar).CornerRadius = UDim.new(1, 0)
+			local BarContainer = Instance.new("Frame")
+			BarContainer.Size             = UDim2.new(1, -40, 0, 8)
+			BarContainer.Position         = UDim2.new(0, 20, 1, -22)
+			BarContainer.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+			BarContainer.BorderSizePixel  = 0
+			BarContainer.Parent           = SliderFrame
+			Instance.new("UICorner", BarContainer).CornerRadius = UDim.new(1, 0)
 
 			local Fill = Instance.new("Frame")
 			Fill.Size             = UDim2.new(0, 0, 1, 0)
 			Fill.BackgroundColor3 = Colors.Accent
 			Fill.BorderSizePixel  = 0
-			Fill.Parent           = Bar
+			Fill.Parent           = BarContainer
 			Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+			
+			-- Animated gradient on fill
+			local Gradient = Instance.new("UIGradient", Fill)
+			Gradient.Color = ColorSequence.new{
+				ColorSequenceKeypoint.new(0, Colors.Accent),
+				ColorSequenceKeypoint.new(1, Colors.AccentDark)
+			}
 
 			local function SetValue(pct)
 				pct = math.clamp(pct, 0, 1)
-				Fill.Size = UDim2.new(pct, 0, 1, 0)
+				TweenPlay(Fill, {Size = UDim2.new(pct, 0, 1, 0)}, 0.15)
 				Value = math.round(Min + (Max - Min) * pct)
 				ValueLabel.Text = tostring(Value)
 				if Callback then Callback(Value) end
@@ -549,11 +603,11 @@ function Library:CreateWindow(Title)
 
 			local dragging = false
 
-			Bar.InputBegan:Connect(function(input)
+			BarContainer.InputBegan:Connect(function(input)
 				if input.UserInputType == Enum.UserInputType.MouseButton1 then
 					dragging = true
 					local mx = UserInputService:GetMouseLocation().X
-					local pct = (mx - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X
+					local pct = (mx - BarContainer.AbsolutePosition.X) / BarContainer.AbsoluteSize.X
 					SetValue(pct)
 				end
 			end)
@@ -561,7 +615,7 @@ function Library:CreateWindow(Title)
 			UserInputService.InputChanged:Connect(function(input)
 				if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
 					local mx = UserInputService:GetMouseLocation().X
-					local pct = (mx - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X
+					local pct = (mx - BarContainer.AbsolutePosition.X) / BarContainer.AbsoluteSize.X
 					SetValue(pct)
 				end
 			end)
@@ -571,12 +625,22 @@ function Library:CreateWindow(Title)
 					dragging = false
 				end
 			end)
+			
+			RegisterHover(SliderFrame,
+				function() 
+					TweenPlay(SliderFrame, {BackgroundTransparency = 0}, 0.2)
+				end,
+				function() 
+					TweenPlay(SliderFrame, {BackgroundTransparency = 0.2}, 0.2)
+				end
+			)
 		end
 
 		function Elements:CreateButton(Text, Callback)
 			local Button = Instance.new("TextButton")
-			Button.Size             = UDim2.new(1, 0, 0, 45)
+			Button.Size             = UDim2.new(1, 0, 0, 50)
 			Button.BackgroundColor3 = Colors.Element
+			Button.BackgroundTransparency = 0.2
 			Button.Text             = Text
 			Button.TextColor3       = Colors.Text
 			Button.Font             = Enum.Font.GothamMedium
@@ -586,11 +650,21 @@ function Library:CreateWindow(Title)
 			Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10)
 
 			RegisterHover(Button,
-				function() Button.BackgroundColor3 = Colors.ElementHover end,
-				function() Button.BackgroundColor3 = Colors.Element end
+				function() 
+					TweenPlay(Button, {BackgroundTransparency = 0, BackgroundColor3 = Colors.ElementHover}, 0.2)
+					TweenPlay(Button, {TextColor3 = Colors.TextActive}, 0.2)
+				end,
+				function() 
+					TweenPlay(Button, {BackgroundTransparency = 0.2, BackgroundColor3 = Colors.Element}, 0.2)
+					TweenPlay(Button, {TextColor3 = Colors.Text}, 0.2)
+				end
 			)
 
 			Button.MouseButton1Click:Connect(function()
+				-- Click animation
+				TweenPlay(Button, {BackgroundTransparency = 0, BackgroundColor3 = Colors.Accent}, 0.1)
+				task.wait(0.1)
+				TweenPlay(Button, {BackgroundTransparency = 0.2, BackgroundColor3 = Colors.Element}, 0.2)
 				if Callback then Callback() end
 			end)
 		end
@@ -600,8 +674,9 @@ function Library:CreateWindow(Title)
 			local Open = false
 
 			local DropdownFrame = Instance.new("Frame")
-			DropdownFrame.Size             = UDim2.new(1, 0, 0, 45)
+			DropdownFrame.Size             = UDim2.new(1, 0, 0, 50)
 			DropdownFrame.BackgroundColor3 = Colors.Element
+			DropdownFrame.BackgroundTransparency = 0.2
 			DropdownFrame.ClipsDescendants = false
 			DropdownFrame.Parent           = Page
 			Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 10)
@@ -614,8 +689,8 @@ function Library:CreateWindow(Title)
 			DropdownButton.Parent                 = DropdownFrame
 
 			local Label = Instance.new("TextLabel")
-			Label.Size                   = UDim2.new(1, -80, 1, 0)
-			Label.Position               = UDim2.new(0, 18, 0, 0)
+			Label.Size                   = UDim2.new(1, -100, 1, 0)
+			Label.Position               = UDim2.new(0, 20, 0, 0)
 			Label.BackgroundTransparency = 1
 			Label.Text                   = Text
 			Label.TextColor3             = Colors.Text
@@ -625,42 +700,57 @@ function Library:CreateWindow(Title)
 			Label.Parent                 = DropdownFrame
 
 			local ValueLabel = Instance.new("TextLabel")
-			ValueLabel.Size                   = UDim2.new(0, 100, 1, 0)
-			ValueLabel.Position               = UDim2.new(1, -118, 0, 0)
+			ValueLabel.Size                   = UDim2.new(0, 120, 1, 0)
+			ValueLabel.Position               = UDim2.new(1, -145, 0, 0)
 			ValueLabel.BackgroundTransparency = 1
 			ValueLabel.Text                   = Selected
 			ValueLabel.TextColor3             = Colors.TextDim
 			ValueLabel.Font                   = Enum.Font.Gotham
 			ValueLabel.TextSize               = 13
 			ValueLabel.TextXAlignment         = Enum.TextXAlignment.Right
+			ValueLabel.TextTruncate           = Enum.TextTruncate.AtEnd
 			ValueLabel.Parent                 = DropdownFrame
 
 			local Arrow = Instance.new("TextLabel")
 			Arrow.Size                   = UDim2.new(0, 20, 1, 0)
-			Arrow.Position               = UDim2.new(1, -25, 0, 0)
+			Arrow.Position               = UDim2.new(1, -30, 0, 0)
 			Arrow.BackgroundTransparency = 1
 			Arrow.Text                   = "▼"
 			Arrow.TextColor3             = Colors.TextDim
 			Arrow.Font                   = Enum.Font.Gotham
 			Arrow.TextSize               = 10
+			Arrow.Rotation               = 0
 			Arrow.Parent                 = DropdownFrame
 
-			local OptionsFrame = Instance.new("Frame")
-			OptionsFrame.Size             = UDim2.new(1, 0, 0, 0)
+			local OptionsFrame = Instance.new("ScrollingFrame")
+			OptionsFrame.Size             = UDim2.new(1, 0, 0, math.min(#Options * 38 + 10, 200))
 			OptionsFrame.Position         = UDim2.new(0, 0, 1, 5)
 			OptionsFrame.BackgroundColor3 = Colors.Panel
+			OptionsFrame.BackgroundTransparency = 0.05
+			OptionsFrame.BorderSizePixel  = 0
 			OptionsFrame.Visible          = false
+			OptionsFrame.ScrollBarThickness = 4
+			OptionsFrame.ScrollBarImageColor3 = Colors.Accent
+			OptionsFrame.CanvasSize       = UDim2.new(0, 0, 0, #Options * 38 + 10)
 			OptionsFrame.Parent           = DropdownFrame
 			Instance.new("UICorner", OptionsFrame).CornerRadius = UDim.new(0, 8)
+			
+			local stroke = Instance.new("UIStroke", OptionsFrame)
+			stroke.Color = Colors.Divider
+			stroke.Thickness = 1
+			stroke.Transparency = 0.5
 
 			local OptionsList = Instance.new("UIListLayout", OptionsFrame)
-			OptionsList.Padding = UDim.new(0, 2)
+			OptionsList.Padding = UDim.new(0, 3)
 			Instance.new("UIPadding", OptionsFrame).PaddingTop = UDim.new(0, 5)
 			Instance.new("UIPadding", OptionsFrame).PaddingBottom = UDim.new(0, 5)
+			Instance.new("UIPadding", OptionsFrame).PaddingLeft = UDim.new(0, 5)
+			Instance.new("UIPadding", OptionsFrame).PaddingRight = UDim.new(0, 5)
 
 			for _, option in ipairs(Options) do
 				local OptionButton = Instance.new("TextButton")
-				OptionButton.Size             = UDim2.new(1, 0, 0, 32)
+				OptionButton.Size             = UDim2.new(1, -10, 0, 35)
+				OptionButton.BackgroundColor3 = Colors.Element
 				OptionButton.BackgroundTransparency = 1
 				OptionButton.Text             = option
 				OptionButton.TextColor3       = Colors.Text
@@ -668,12 +758,15 @@ function Library:CreateWindow(Title)
 				OptionButton.TextSize         = 13
 				OptionButton.AutoButtonColor  = false
 				OptionButton.Parent           = OptionsFrame
+				Instance.new("UICorner", OptionButton).CornerRadius = UDim.new(0, 6)
 
 				RegisterHover(OptionButton,
-					function() OptionButton.BackgroundColor3 = Colors.Element
-						OptionButton.BackgroundTransparency = 0
+					function() 
+						TweenPlay(OptionButton, {BackgroundTransparency = 0, BackgroundColor3 = Colors.ElementHover}, 0.15)
 					end,
-					function() OptionButton.BackgroundTransparency = 1 end
+					function() 
+						TweenPlay(OptionButton, {BackgroundTransparency = 1}, 0.15)
+					end
 				)
 
 				OptionButton.MouseButton1Click:Connect(function()
@@ -686,25 +779,40 @@ function Library:CreateWindow(Title)
 				end)
 			end
 
-			OptionsFrame.Size = UDim2.new(1, 0, 0, (#Options * 34) + 10)
+			RegisterHover(DropdownFrame,
+				function() 
+					TweenPlay(DropdownFrame, {BackgroundTransparency = 0}, 0.2)
+				end,
+				function() 
+					if not Open then
+						TweenPlay(DropdownFrame, {BackgroundTransparency = 0.2}, 0.2)
+					end
+				end
+			)
 
 			DropdownButton.MouseButton1Click:Connect(function()
 				Open = not Open
 				OptionsFrame.Visible = Open
-				TweenPlay(Arrow, {Rotation = Open and 180 or 0}, 0.2)
+				TweenPlay(Arrow, {Rotation = Open and 180 or 0}, 0.25)
+				if Open then
+					DropdownFrame.BackgroundTransparency = 0
+				else
+					DropdownFrame.BackgroundTransparency = 0.2
+				end
 			end)
 		end
 
 		function Elements:CreateTextbox(Text, Placeholder, Callback)
 			local TextboxFrame = Instance.new("Frame")
-			TextboxFrame.Size             = UDim2.new(1, 0, 0, 45)
+			TextboxFrame.Size             = UDim2.new(1, 0, 0, 50)
 			TextboxFrame.BackgroundColor3 = Colors.Element
+			TextboxFrame.BackgroundTransparency = 0.2
 			TextboxFrame.Parent           = Page
 			Instance.new("UICorner", TextboxFrame).CornerRadius = UDim.new(0, 10)
 
 			local Label = Instance.new("TextLabel")
-			Label.Size                   = UDim2.new(0.4, 0, 1, 0)
-			Label.Position               = UDim2.new(0, 18, 0, 0)
+			Label.Size                   = UDim2.new(0.35, 0, 1, 0)
+			Label.Position               = UDim2.new(0, 20, 0, 0)
 			Label.BackgroundTransparency = 1
 			Label.Text                   = Text
 			Label.TextColor3             = Colors.Text
@@ -714,9 +822,10 @@ function Library:CreateWindow(Title)
 			Label.Parent                 = TextboxFrame
 
 			local Textbox = Instance.new("TextBox")
-			Textbox.Size             = UDim2.new(0.55, -25, 0, 30)
-			Textbox.Position         = UDim2.new(0.45, 0, 0.5, -15)
+			Textbox.Size             = UDim2.new(0.6, -30, 0, 32)
+			Textbox.Position         = UDim2.new(0.4, 0, 0.5, -16)
 			Textbox.BackgroundColor3 = Colors.Panel
+			Textbox.BackgroundTransparency = 0.3
 			Textbox.Text             = ""
 			Textbox.PlaceholderText  = Placeholder or ""
 			Textbox.TextColor3       = Colors.Text
@@ -725,10 +834,25 @@ function Library:CreateWindow(Title)
 			Textbox.TextSize         = 13
 			Textbox.Parent           = TextboxFrame
 			Instance.new("UICorner", Textbox).CornerRadius = UDim.new(0, 6)
+			Instance.new("UIPadding", Textbox).PaddingLeft = UDim.new(0, 10)
+
+			Textbox.Focused:Connect(function()
+				TweenPlay(Textbox, {BackgroundTransparency = 0}, 0.2)
+			end)
 
 			Textbox.FocusLost:Connect(function()
+				TweenPlay(Textbox, {BackgroundTransparency = 0.3}, 0.2)
 				if Callback then Callback(Textbox.Text) end
 			end)
+			
+			RegisterHover(TextboxFrame,
+				function() 
+					TweenPlay(TextboxFrame, {BackgroundTransparency = 0}, 0.2)
+				end,
+				function() 
+					TweenPlay(TextboxFrame, {BackgroundTransparency = 0.2}, 0.2)
+				end
+			)
 		end
 
 		function Elements:CreateKeybind(Text, DefaultKey, Callback)
@@ -736,14 +860,15 @@ function Library:CreateWindow(Title)
 			local Binding = false
 
 			local KeybindFrame = Instance.new("Frame")
-			KeybindFrame.Size             = UDim2.new(1, 0, 0, 45)
+			KeybindFrame.Size             = UDim2.new(1, 0, 0, 50)
 			KeybindFrame.BackgroundColor3 = Colors.Element
+			KeybindFrame.BackgroundTransparency = 0.2
 			KeybindFrame.Parent           = Page
 			Instance.new("UICorner", KeybindFrame).CornerRadius = UDim.new(0, 10)
 
 			local Label = Instance.new("TextLabel")
-			Label.Size                   = UDim2.new(1, -120, 1, 0)
-			Label.Position               = UDim2.new(0, 18, 0, 0)
+			Label.Size                   = UDim2.new(1, -130, 1, 0)
+			Label.Position               = UDim2.new(0, 20, 0, 0)
 			Label.BackgroundTransparency = 1
 			Label.Text                   = Text
 			Label.TextColor3             = Colors.Text
@@ -753,9 +878,10 @@ function Library:CreateWindow(Title)
 			Label.Parent                 = KeybindFrame
 
 			local KeyButton = Instance.new("TextButton")
-			KeyButton.Size             = UDim2.new(0, 100, 0, 30)
-			KeyButton.Position         = UDim2.new(1, -115, 0.5, -15)
+			KeyButton.Size             = UDim2.new(0, 110, 0, 32)
+			KeyButton.Position         = UDim2.new(1, -125, 0.5, -16)
 			KeyButton.BackgroundColor3 = Colors.Panel
+			KeyButton.BackgroundTransparency = 0.3
 			KeyButton.Text             = CurrentKey
 			KeyButton.TextColor3       = Colors.TextDim
 			KeyButton.Font             = Enum.Font.GothamMedium
@@ -764,10 +890,23 @@ function Library:CreateWindow(Title)
 			KeyButton.Parent           = KeybindFrame
 			Instance.new("UICorner", KeyButton).CornerRadius = UDim.new(0, 6)
 
+			RegisterHover(KeyButton,
+				function()
+					if not Binding then
+						TweenPlay(KeyButton, {BackgroundTransparency = 0}, 0.2)
+					end
+				end,
+				function()
+					if not Binding then
+						TweenPlay(KeyButton, {BackgroundTransparency = 0.3}, 0.2)
+					end
+				end
+			)
+
 			KeyButton.MouseButton1Click:Connect(function()
 				Binding = true
 				KeyButton.Text = "..."
-				KeyButton.TextColor3 = Colors.Accent
+				TweenPlay(KeyButton, {BackgroundColor3 = Colors.Accent, TextColor3 = Colors.TextActive}, 0.2)
 			end)
 
 			UserInputService.InputBegan:Connect(function(input)
@@ -775,12 +914,21 @@ function Library:CreateWindow(Title)
 					if input.KeyCode ~= Enum.KeyCode.Unknown then
 						CurrentKey = input.KeyCode.Name
 						KeyButton.Text = CurrentKey
-						KeyButton.TextColor3 = Colors.TextDim
+						TweenPlay(KeyButton, {BackgroundColor3 = Colors.Panel, TextColor3 = Colors.TextDim}, 0.2)
 						Binding = false
 						if Callback then Callback(CurrentKey) end
 					end
 				end
 			end)
+			
+			RegisterHover(KeybindFrame,
+				function() 
+					TweenPlay(KeybindFrame, {BackgroundTransparency = 0}, 0.2)
+				end,
+				function() 
+					TweenPlay(KeybindFrame, {BackgroundTransparency = 0.2}, 0.2)
+				end
+			)
 		end
 
 		return Elements
