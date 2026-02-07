@@ -241,10 +241,16 @@ function Library:CreateWindow(Title)
 		-- Rotate arrow: 90° = down, -90° = up
 		if Minimized then
 			TweenPlay(MinArrow, { Rotation = -90 }, 0.25, Enum.EasingStyle.Back)
-			ProfileContainer.Visible = false
+			-- Hide profile when minimized
+			if ProfileContainer then
+				ProfileContainer.Visible = false
+			end
 		else
 			TweenPlay(MinArrow, { Rotation = 90 }, 0.25, Enum.EasingStyle.Back)
-			ProfileContainer.Visible = true
+			-- Show profile when restored
+			if ProfileContainer then
+				ProfileContainer.Visible = true
+			end
 		end
 		
 		TweenPlay(MainFrame, { Size = Minimized and UDim2.new(0, 520, 0, 50) or WindowSize }, 0.3, Enum.EasingStyle.Quart)
@@ -374,7 +380,7 @@ function Library:CreateWindow(Title)
 	local AllTabs = {}
 	local ActiveTab = nil
 
-	function Tabs:CreateTab(TabName, Icon)
+	function Tabs:CreateTab(TabName, IconAssetId)
 		local TabButton = Instance.new("TextButton")
 		TabButton.Size             = UDim2.new(1, 0, 0, 50)
 		TabButton.BackgroundColor3 = Colors.Element
@@ -399,15 +405,27 @@ function Library:CreateWindow(Title)
 		IconGlow.Thickness = 0
 		IconGlow.Transparency = 0.5
 
-		-- Tab icon/letter
-		local TabLabel = Instance.new("TextLabel")
-		TabLabel.Size                   = UDim2.new(1, 0, 1, 0)
-		TabLabel.BackgroundTransparency = 1
-		TabLabel.Text                   = TabName:sub(1, 1):upper()
-		TabLabel.TextColor3             = Colors.TextDim
-		TabLabel.Font                   = Enum.Font.GothamBold
-		TabLabel.TextSize               = 18
-		TabLabel.Parent                 = IconBg
+		-- Tab icon - either image or text
+		if IconAssetId and type(IconAssetId) == "string" and IconAssetId:match("rbxassetid://") then
+			-- Use image icon
+			local TabIcon = Instance.new("ImageLabel")
+			TabIcon.Size                   = UDim2.new(0.7, 0, 0.7, 0)
+			TabIcon.Position               = UDim2.new(0.15, 0, 0.15, 0)
+			TabIcon.BackgroundTransparency = 1
+			TabIcon.Image                  = IconAssetId
+			TabIcon.ImageColor3            = Colors.TextDim
+			TabIcon.Parent                 = IconBg
+		else
+			-- Use text letter
+			local TabLabel = Instance.new("TextLabel")
+			TabLabel.Size                   = UDim2.new(1, 0, 1, 0)
+			TabLabel.BackgroundTransparency = 1
+			TabLabel.Text                   = TabName:sub(1, 1):upper()
+			TabLabel.TextColor3             = Colors.TextDim
+			TabLabel.Font                   = Enum.Font.GothamBold
+			TabLabel.TextSize               = 18
+			TabLabel.Parent                 = IconBg
+		end
 
 		local Page = Instance.new("ScrollingFrame")
 		Page.Size                   = UDim2.new(1, 0, 1, 0)
@@ -427,20 +445,34 @@ function Library:CreateWindow(Title)
 		Instance.new("UIPadding", Page).PaddingRight = UDim.new(0, 20)
 		Instance.new("UIPadding", Page).PaddingBottom = UDim.new(0, 20)
 
-		table.insert(AllTabs, {button = TabButton, iconBg = IconBg, label = TabLabel, page = Page, glow = IconGlow})
+		table.insert(AllTabs, {button = TabButton, iconBg = IconBg, page = Page, glow = IconGlow})
 		local myIndex = #AllTabs
 
 		local function ActivateTab()
 			for _, tab in ipairs(AllTabs) do
 				tab.page.Visible = false
 				TweenPlay(tab.iconBg, {BackgroundColor3 = Colors.Element, BackgroundTransparency = 0.3}, 0.25)
-				TweenPlay(tab.label, {TextColor3 = Colors.TextDim}, 0.25)
 				TweenPlay(tab.glow, {Thickness = 0}, 0.25)
+				-- Handle both image and text icons
+				for _, child in ipairs(tab.iconBg:GetChildren()) do
+					if child:IsA("ImageLabel") then
+						TweenPlay(child, {ImageColor3 = Colors.TextDim}, 0.25)
+					elseif child:IsA("TextLabel") then
+						TweenPlay(child, {TextColor3 = Colors.TextDim}, 0.25)
+					end
+				end
 			end
 			Page.Visible = true
 			TweenPlay(IconBg, {BackgroundColor3 = Colors.Accent, BackgroundTransparency = 0}, 0.25)
-			TweenPlay(TabLabel, {TextColor3 = Colors.TextActive}, 0.25)
 			TweenPlay(IconGlow, {Thickness = 2}, 0.25)
+			-- Handle both image and text icons
+			for _, child in ipairs(IconBg:GetChildren()) do
+				if child:IsA("ImageLabel") then
+					TweenPlay(child, {ImageColor3 = Colors.TextActive}, 0.25)
+				elseif child:IsA("TextLabel") then
+					TweenPlay(child, {TextColor3 = Colors.TextActive}, 0.25)
+				end
+			end
 			ActiveTab = myIndex
 		end
 
@@ -448,13 +480,25 @@ function Library:CreateWindow(Title)
 			function()
 				if ActiveTab ~= myIndex then
 					TweenPlay(IconBg, {BackgroundTransparency = 0, BackgroundColor3 = Colors.ElementHover}, 0.2)
-					TweenPlay(TabLabel, {TextColor3 = Colors.Text}, 0.2)
+					for _, child in ipairs(IconBg:GetChildren()) do
+						if child:IsA("ImageLabel") then
+							TweenPlay(child, {ImageColor3 = Colors.Text}, 0.2)
+						elseif child:IsA("TextLabel") then
+							TweenPlay(child, {TextColor3 = Colors.Text}, 0.2)
+						end
+					end
 				end
 			end,
 			function()
 				if ActiveTab ~= myIndex then
 					TweenPlay(IconBg, {BackgroundTransparency = 0.3, BackgroundColor3 = Colors.Element}, 0.2)
-					TweenPlay(TabLabel, {TextColor3 = Colors.TextDim}, 0.2)
+					for _, child in ipairs(IconBg:GetChildren()) do
+						if child:IsA("ImageLabel") then
+							TweenPlay(child, {ImageColor3 = Colors.TextDim}, 0.2)
+						elseif child:IsA("TextLabel") then
+							TweenPlay(child, {TextColor3 = Colors.TextDim}, 0.2)
+						end
+					end
 				end
 			end
 		)
@@ -959,6 +1003,22 @@ function Library:CreateWindow(Title)
 
 		return Elements
 	end
+
+	-- ── UI Toggle Keybind ──────────────────────────────────
+	local UIVisible = true
+	local ToggleKey = Enum.KeyCode.RightShift
+	
+	function Library:SetToggleKey(key)
+		ToggleKey = key
+	end
+	
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode == ToggleKey then
+			UIVisible = not UIVisible
+			MainFrame.Visible = UIVisible
+		end
+	end)
 
 	-- ── Open Animation ──────────────────────────────────────
 	task.defer(function()
