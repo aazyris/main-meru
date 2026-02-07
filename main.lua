@@ -39,32 +39,49 @@ function Library:CreateWindow(Title)
 	local prev = CoreGui:FindFirstChild("MeruHub_UI")
 	if prev then prev:Destroy() end
 
-	-- ── Hover System ────────────────────────────────────────
+	-- ── Hover System (Rebuilt) ────────────────────────────────────────
 	local HoverTargets = {}
+	local ActiveHovers = {}  -- Track which elements are currently hovered
 
 	local function RegisterHover(guiObj, onEnter, onLeave)
-		table.insert(HoverTargets, { instance = guiObj, onEnter = onEnter, onLeave = onLeave, inside = false })
+		if not guiObj then return end
+		local hoverId = #HoverTargets + 1
+		table.insert(HoverTargets, { 
+			id = hoverId,
+			instance = guiObj, 
+			onEnter = onEnter, 
+			onLeave = onLeave, 
+			inside = false 
+		})
 	end
 
 	local function IsMouseOver(guiObj)
-		if not guiObj or not guiObj.Parent then return false end
+		if not guiObj or not guiObj.Parent or not guiObj.Visible then return false end
 		local pos = UserInputService:GetMouseLocation()
 		local abs = guiObj.AbsolutePosition
 		local sz  = guiObj.AbsoluteSize
-		-- Add a 2 pixel buffer to prevent accidental triggers
-		return pos.X >= abs.X + 2 and pos.X <= abs.X + sz.X - 2
-			and pos.Y >= abs.Y + 2 and pos.Y <= abs.Y + sz.Y - 2
+		-- Strict bounds checking - must be fully inside
+		return pos.X > abs.X and pos.X < abs.X + sz.X
+			and pos.Y > abs.Y and pos.Y < abs.Y + sz.Y
 	end
 
-	UserInputService.InputChanged:Connect(function(input)
-		if input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+	-- Use RenderStepped for smoother hover detection
+	RunService.RenderStepped:Connect(function()
 		for _, h in ipairs(HoverTargets) do
 			if h.instance and h.instance.Parent then
 				local over = IsMouseOver(h.instance)
 				if over and not h.inside then
-					h.inside = true;  h.onEnter()
+					h.inside = true
+					ActiveHovers[h.id] = true
+					if h.onEnter then 
+						task.spawn(h.onEnter)  -- Async to prevent blocking
+					end
 				elseif not over and h.inside then
-					h.inside = false; h.onLeave()
+					h.inside = false
+					ActiveHovers[h.id] = nil
+					if h.onLeave then 
+						task.spawn(h.onLeave)
+					end
 				end
 			end
 		end
@@ -347,24 +364,44 @@ function Library:CreateWindow(Title)
 	ContentContainer.BackgroundTransparency = 1
 	ContentContainer.Parent                 = MainFrame
 
-	-- ── Dragging ────────────────────────────────────────────
+	-- ── Dragging (Smooth with Lerp) ────────────────────────────────────────────
 	local Dragging = false
 	local DragStart, StartPos
+	local TargetPos = Vector2.new(0, 0)
+	local CurrentPos = Vector2.new(0, 0)
+	local DragConnection = nil
+
+	local DRAG_LERP_SPEED = 0.25  -- Smooth interpolation
 
 	TitleBar.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			Dragging = true
 			DragStart = input.Position
 			StartPos = MainFrame.Position
+			CurrentPos = Vector2.new(StartPos.X.Offset, StartPos.Y.Offset)
+			TargetPos = CurrentPos
+			
+			-- Start smooth lerp loop
+			if DragConnection then DragConnection:Disconnect() end
+			DragConnection = RunService.RenderStepped:Connect(function()
+				if Dragging then
+					-- Smooth interpolation
+					CurrentPos = CurrentPos:Lerp(TargetPos, DRAG_LERP_SPEED)
+					MainFrame.Position = UDim2.new(
+						StartPos.X.Scale, CurrentPos.X,
+						StartPos.Y.Scale, CurrentPos.Y
+					)
+				end
+			end)
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(input)
 		if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
 			local Delta = input.Position - DragStart
-			MainFrame.Position = UDim2.new(
-				StartPos.X.Scale, StartPos.X.Offset + Delta.X,
-				StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y
+			TargetPos = Vector2.new(
+				StartPos.X.Offset + Delta.X,
+				StartPos.Y.Offset + Delta.Y
 			)
 		end
 	end)
@@ -372,6 +409,17 @@ function Library:CreateWindow(Title)
 	UserInputService.InputEnded:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			Dragging = false
+			if DragConnection then
+				DragConnection:Disconnect()
+				DragConnection = nil
+			end
+			-- Snap to final position
+			if StartPos then
+				MainFrame.Position = UDim2.new(
+					StartPos.X.Scale, TargetPos.X,
+					StartPos.Y.Scale, TargetPos.Y
+				)
+			end
 		end
 	end)
 
@@ -748,6 +796,7 @@ function Library:CreateWindow(Title)
 			DropdownFrame.BackgroundColor3 = Colors.Element
 			DropdownFrame.BackgroundTransparency = 0.2
 			DropdownFrame.ClipsDescendants = false
+			DropdownFrame.ZIndex           = 2  -- Ensure it's above other elements
 			DropdownFrame.Parent           = Page
 			Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 10)
 
@@ -756,6 +805,7 @@ function Library:CreateWindow(Title)
 			DropdownButton.BackgroundTransparency = 1
 			DropdownButton.Text                   = ""
 			DropdownButton.AutoButtonColor        = false
+			DropdownButton.ZIndex                 = 3
 			DropdownButton.Parent                 = DropdownFrame
 
 			local Label = Instance.new("TextLabel")
@@ -767,6 +817,7 @@ function Library:CreateWindow(Title)
 			Label.Font                   = Enum.Font.GothamMedium
 			Label.TextSize               = 14
 			Label.TextXAlignment         = Enum.TextXAlignment.Left
+			Label.ZIndex                 = 3
 			Label.Parent                 = DropdownFrame
 
 			local ValueLabel = Instance.new("TextLabel")
@@ -779,6 +830,7 @@ function Library:CreateWindow(Title)
 			ValueLabel.TextSize               = 13
 			ValueLabel.TextXAlignment         = Enum.TextXAlignment.Right
 			ValueLabel.TextTruncate           = Enum.TextTruncate.AtEnd
+			ValueLabel.ZIndex                 = 3
 			ValueLabel.Parent                 = DropdownFrame
 
 			local Arrow = Instance.new("TextLabel")
@@ -790,6 +842,7 @@ function Library:CreateWindow(Title)
 			Arrow.Font                   = Enum.Font.Gotham
 			Arrow.TextSize               = 10
 			Arrow.Rotation               = 0
+			Arrow.ZIndex                 = 3
 			Arrow.Parent                 = DropdownFrame
 
 			local OptionsFrame = Instance.new("ScrollingFrame")
@@ -802,6 +855,7 @@ function Library:CreateWindow(Title)
 			OptionsFrame.ScrollBarThickness = 4
 			OptionsFrame.ScrollBarImageColor3 = Colors.Accent
 			OptionsFrame.CanvasSize       = UDim2.new(0, 0, 0, #Options * 38 + 10)
+			OptionsFrame.ZIndex           = 10  -- Much higher to be on top
 			OptionsFrame.Parent           = DropdownFrame
 			Instance.new("UICorner", OptionsFrame).CornerRadius = UDim.new(0, 8)
 			
@@ -827,6 +881,7 @@ function Library:CreateWindow(Title)
 				OptionButton.Font             = Enum.Font.Gotham
 				OptionButton.TextSize         = 13
 				OptionButton.AutoButtonColor  = false
+				OptionButton.ZIndex           = 11
 				OptionButton.Parent           = OptionsFrame
 				Instance.new("UICorner", OptionButton).CornerRadius = UDim.new(0, 6)
 
@@ -845,13 +900,16 @@ function Library:CreateWindow(Title)
 					Open = false
 					OptionsFrame.Visible = false
 					TweenPlay(Arrow, {Rotation = 0}, 0.2)
+					TweenPlay(DropdownFrame, {BackgroundTransparency = 0.2}, 0.2)
 					if Callback then Callback(option) end
 				end)
 			end
 
 			RegisterHover(DropdownFrame,
 				function() 
-					TweenPlay(DropdownFrame, {BackgroundTransparency = 0}, 0.2)
+					if not Open then
+						TweenPlay(DropdownFrame, {BackgroundTransparency = 0}, 0.2)
+					end
 				end,
 				function() 
 					if not Open then
