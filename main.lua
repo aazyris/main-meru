@@ -47,11 +47,13 @@ function Library:CreateWindow(Title)
 	end
 
 	local function IsMouseOver(guiObj)
+		if not guiObj or not guiObj.Parent then return false end
 		local pos = UserInputService:GetMouseLocation()
 		local abs = guiObj.AbsolutePosition
 		local sz  = guiObj.AbsoluteSize
-		return pos.X >= abs.X and pos.X <= abs.X + sz.X
-			and pos.Y >= abs.Y and pos.Y <= abs.Y + sz.Y
+		-- Add a 2 pixel buffer to prevent accidental triggers
+		return pos.X >= abs.X + 2 and pos.X <= abs.X + sz.X - 2
+			and pos.Y >= abs.Y + 2 and pos.Y <= abs.Y + sz.Y - 2
 	end
 
 	UserInputService.InputChanged:Connect(function(input)
@@ -182,14 +184,22 @@ function Library:CreateWindow(Title)
 	-- Settings icon removed to match image
 	
 	-- Minimize button
+	local MinArrow = Instance.new("TextLabel")
+	MinArrow.Size                   = UDim2.new(0, 35, 0, 35)
+	MinArrow.Position               = UDim2.new(1, -80, 0.5, -17.5)
+	MinArrow.BackgroundTransparency = 1
+	MinArrow.Text                   = ">"
+	MinArrow.TextColor3             = Colors.TextDim
+	MinArrow.TextSize               = 20
+	MinArrow.Font                   = Enum.Font.GothamBold
+	MinArrow.Rotation               = 90  -- Points down
+	MinArrow.Parent                 = TitleBar
+	
 	local MinButton = Instance.new("TextButton")
-	MinButton.Size                   = UDim2.new(0, 35, 0, 35)
-	MinButton.Position               = UDim2.new(1, -80, 0.5, -17.5)
+	MinButton.Size                   = UDim2.new(0, 40, 0, 40)
+	MinButton.Position               = UDim2.new(1, -85, 0.5, -20)
 	MinButton.BackgroundTransparency = 1
-	MinButton.Text                   = "─"
-	MinButton.TextColor3             = Colors.TextDim
-	MinButton.TextSize               = 18
-	MinButton.Font                   = Enum.Font.GothamBold
+	MinButton.Text                   = ""
 	MinButton.Parent                 = TitleBar
 
 	-- Close button
@@ -204,8 +214,14 @@ function Library:CreateWindow(Title)
 	CloseButton.Parent                 = TitleBar
 
 	RegisterHover(MinButton,
-		function() MinButton.TextColor3 = Colors.TextActive end,
-		function() MinButton.TextColor3 = Colors.TextDim end
+		function() 
+			MinArrow.TextColor3 = Colors.TextActive
+			TweenPlay(MinArrow, { TextSize = 22 }, 0.15)
+		end,
+		function() 
+			MinArrow.TextColor3 = Colors.TextDim
+			TweenPlay(MinArrow, { TextSize = 20 }, 0.15)
+		end
 	)
 
 	RegisterHover(CloseButton,
@@ -221,7 +237,17 @@ function Library:CreateWindow(Title)
 
 	MinButton.MouseButton1Click:Connect(function()
 		Minimized = not Minimized
-		TweenPlay(MainFrame, { Size = Minimized and UDim2.new(0, 520, 0, 45) or WindowSize }, 0.3)
+		
+		-- Rotate arrow: 90° = down, -90° = up
+		if Minimized then
+			TweenPlay(MinArrow, { Rotation = -90 }, 0.25, Enum.EasingStyle.Back)
+			ProfileContainer.Visible = false
+		else
+			TweenPlay(MinArrow, { Rotation = 90 }, 0.25, Enum.EasingStyle.Back)
+			ProfileContainer.Visible = true
+		end
+		
+		TweenPlay(MainFrame, { Size = Minimized and UDim2.new(0, 520, 0, 50) or WindowSize }, 0.3, Enum.EasingStyle.Quart)
 	end)
 
 	CloseButton.MouseButton1Click:Connect(function()
